@@ -187,7 +187,7 @@ public class APIServer {
             }
         });
         
-        // 5. Get punch history for an employee
+        // 5. Get punch history for an employe
         get("/punches/:employeeId", (req, res) -> {
             try {
                 int employeeId = Integer.parseInt(req.params(":employeeId"));
