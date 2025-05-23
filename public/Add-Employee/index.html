@@ -136,7 +136,7 @@
         const result = await response.text();
 
         if (response.ok) {
-            alert("✅ Employee added successfully!");
+            alert("Employee added successfully!");
             document.querySelector("form").reset();
             document.getElementById("preview-image").src = "Images/default-user.png"; // Reset image preview
         } else {
