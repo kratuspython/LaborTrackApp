@@ -1,0 +1,179 @@
+body {
+    margin: 0px;
+    padding: 0px;
+    background-color: #f0f1f6;
+    display:block;
+    font-family: 'Poppins', sans-serif;
+}
+
+/* -------------- Navegation Bar ------------------- */
+.nav-bar-container {
+    width: 100%;
+}
+.nav-bar {
+    display: flex;
+    top: 0;
+    left: 0;
+    right: 0;
+    justify-content: space-between;
+    align-items: center;
+    height: 80px;
+    width: 100%;
+    position: fixed;
+    background-color: #1d1d1d;
+    padding: 10px 40px 10px 30px;
+}
+.nav-logo {
+    font-size: 25px;
+    font-weight: 600;
+    margin: 0 0 0 3%;
+    color: white;
+}
+.nav-links {
+    list-style: none;
+    display: flex;
+    gap: 30px;
+    padding: 0;
+    margin: 0 8% 0 0;
+}
+.nav-links li a {
+    color: #f0f0f0;
+    text-decoration: none; 
+    font-size: 18px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: background-color 0.3s ease;
+}
+.nav-links li a:hover,
+.nav-links lia a.active {
+    background-color: #333;
+}
+/* -------------------------------------------------- */
+
+/* =================== Main Content ================= */
+.main-content {
+    display: flex;
+    width: 100%;
+    margin: 100px 0 0 0;
+    text-align: center;
+}
+/* -------------- left panel container -------------- */
+.left-panel-container  {
+    width: 15%;
+    padding: 20px;
+    border: none;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
+    text-align: left;
+}
+.search-input {
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    outline: none;
+    width: 100%;
+    box-sizing: border-box;
+}
+.search-input:focus {
+    border-color: #2a56f5;
+}
+.search-button {
+    padding: 10px;
+    margin: 10px 20px;
+    background-color:#333;
+    font-size: 16px;
+    color: #f0f1f6;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.search-button:hover {
+    background-color: #292929;
+}
+.delete-btn {
+  margin-top: 10px;
+  padding: 6px 10px;
+  background-color: #f04e4e;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s;
+}
+.delete-btn:hover {
+  background-color: #d63b3b;
+}
+/* -------------------------------------------------- */
+
+/* ----------- middle panel container -------------- */
+.middle-panel-container {
+    padding: 20px 0 0px 10px;
+    width: 60%;
+    background-color: white;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    align-items: flex-start;
+    gap:20px;
+    box-sizing: border-box;
+    border: none;
+    border-radius: 8px;
+}
+.employee-card {
+    background-color: white;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    gap: 16px;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    height: 100%;
+    align-self: start;
+}
+.employee-photo {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #1d79f2;
+}
+.employee-info h3 {
+    margin: 0;
+    font-size: 18px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.employee-info p {
+    margin: 4px 0;
+    color: grey;
+    font-size: 14px;
+}
+/* -------------------------------------------------- */
+
+/* ------------- rigth panel container -------------- */
+.right-panel-container {
+    width: 25%;
+}
+.mini-photo {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid #2a56f5;
+  margin-bottom: 10px;
+}
+#miniInfo p {
+  font-size: 13px;
+  margin: 5px 0;
+}
+/* -------------------------------------------------- */
+
+
+/* ================================================== */

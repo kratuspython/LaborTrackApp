@@ -1,0 +1,155 @@
+body {
+    margin: 0px;
+    padding: 0px;
+    background-color: #f0f1f6;
+    display:block;
+    font-family: 'Poppins', sans-serif;
+}
+
+/* -------------- Navegation Bar ------------------- */
+.nav-bar-container {
+    width: 100%;
+}
+.nav-bar {
+    display: flex;
+    top: 0;
+    left: 0;
+    right: 0;
+    justify-content: space-between;
+    align-items: center;
+    height: 80px;
+    width: 100%;
+    position: fixed;
+    background-color: #1d1d1d;
+    padding: 10px 40px 10px 30px;
+}
+.nav-logo {
+    font-size: 25px;
+    font-weight: 600;
+    margin: 0 0 0 3%;
+    color: white;
+}
+.nav-links {
+    list-style: none;
+    display: flex;
+    gap: 30px;
+    padding: 0;
+    margin: 0 8% 0 0;
+}
+.nav-links li a {
+    color: #f0f0f0;
+    text-decoration: none; 
+    font-size: 18px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: background-color 0.3s ease;
+}
+.nav-links li a:hover,
+.nav-links lia a.active {
+    background-color: #333;
+}
+/* -------------------------------------------------- */
+
+/* =================== Main Content ================= */
+.main-content {
+    display: flex;
+    width: 100%;
+    margin: 100px 0 0 0;
+}
+
+/* -------------- left panel container -------------- */
+.left-panel-container  {
+    width: 20%;
+}
+/* -------------------------------------------------- */
+
+/* ----------- middle panel container -------------- */
+.middle-panel-container {
+    width: 60%;
+}
+.add-employee-form h2 {
+    text-align: center;
+    font-size: 24px;
+}
+.add-employee-form {
+    background-color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 50px 20px 20px 20px;
+    max-width: 50%;
+    margin-left: 20%;
+    align-items: center;
+    font-size: 20px;
+}
+.image-upload {
+    display: flex;
+    justify-content: center;
+    margin: 0 0 20px 0;
+    position: relative;
+    font-size: 20px;
+    text-align: center;
+
+}
+.image-upload input[type="file"] {
+    display: none;
+}
+.image-circle {
+    height: 120px;
+    width: 120px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid #1d79f2;
+    background-color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.image-circle:hover {
+    border-color: #0d5ed1;
+}
+
+.image-circle img {
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+}
+.input-group {
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+}
+.input-group input {
+    padding: 5px;
+    margin: 5px;
+    font-size: 16px;
+}
+.form-button {
+    display: flex;
+    justify-content: flex-end;
+}
+.submit-button {
+    padding: 10px 20px;
+    margin: 10px 0 0 0;
+    font-size: 16px;
+    background-color: #1d79f2;
+    color: #f0f1f6;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.submit-button:hover {
+    background-color: #1456c3;
+}
+/* -------------------------------------------------- */
+
+/* ------------- rigth panel container -------------- */
+.rigth-panel-container {
+    width: 20%;
+    
+}
+/* -------------------------------------------------- */
+
+
+/* ================================================== */

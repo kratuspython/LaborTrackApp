@@ -1,0 +1,165 @@
+body {
+    margin: 0px;
+    padding: 0px;
+    background-color: #f0f1f6;
+    display:block;
+    font-family: 'Poppins', sans-serif;
+}
+
+/* ------------ NAVEGATION BAR -------------------- */
+.nav-bar-container {
+    width: 100%;
+}
+.nav-bar {
+    display: flex;
+    top: 0;
+    left: 0;
+    right: 0;
+    justify-content: space-between;
+    align-items: center;
+    height: 80px;
+    width: 100%;
+    position: fixed;
+    background-color: #1d1d1d;
+    padding: 10px 40px 10px 30px;
+}
+.nav-logo {
+    font-size: 25px;
+    font-weight: 600;
+    margin: 0 0 0 3%;
+    color: white;
+}
+.nav-links {
+    list-style: none;
+    display: flex;
+    gap: 30px;
+    padding: 0;
+    margin: 0 8% 0 0;
+}
+.nav-links li a {
+    color: #f0f0f0;
+    text-decoration: none; 
+    font-size: 18px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: background-color 0.3s ease;
+}
+.nav-links li a:hover,
+.nav-links lia a.active {
+    background-color: #333;
+}
+/*----------------------------------------------------------- */
+
+/* --------------------- MAIN CONTENT ------------------------*/
+.main-content {
+    display: flex;
+    width: 100%;
+    margin: 100px 0 0 0;
+}
+/* ----------------------------------------------------------- */
+
+/* ---------------------- LEFT PANEL --------------------------*/
+.left-panel-container {
+    width: 17.5%;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+.add-button,.delete-button {
+    width: 100%;
+    padding: 10px 16px;
+    margin: 0 0 10px 0;
+    background-color: #1d79f2;
+    color: white;
+    font-size: 18px;
+    font-weight: 500;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+.add-button a{
+    color: white;
+    text-decoration: none;
+}
+.add-button a:active {
+    color: #d7d9d4;
+}
+.add-button:hover {
+    background-color: #145dce;
+    transform: translateY(-1px);
+}
+.delete-button {
+    background-color: #c0392b;
+    color: #fff; 
+}
+.delete-button:hover {
+    background-color: #a93226;
+    transform: translateY(-1px);
+}
+/* ------------------------------------------------------------ */
+
+/* ---------------------- MIDDLE PANEL -------------------------*/
+.middle-panel-container {
+    width: 65%;
+    padding: 20px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    align-items: flex-start;
+    gap:20px;
+    background-color: white;
+    box-sizing: border-box;
+}
+.employee-card {
+    background-color: white;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    gap: 16px;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    height: 100%;
+    align-self: start;
+}
+.employee-photo {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #1d79f2;
+}
+.employee-info h3 {
+    margin: 0;
+    font-size: 18px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.employee-info p {
+    margin: 4px 0;
+    color: grey;
+    font-size: 14px;
+}
+.punch-button {
+    padding: 6px 12px;
+    margin: 6px 0 0 0;
+    background-color: #1d79f2;
+    color: white;
+    border: none;
+    border-radius:6px;
+    cursor: pointer;
+    font-size: 14px;
+}
+.punch-button:hover {
+    background-color: #145dce;
+}
+/* ------------------------------------------------------------ */
+
+/* ----------------------- RIGHT PANEL ------------------------- */
+.right-panel-container {
+    width: 17.5%;
+    padding: 20px;
+    color: black;
+}
+/* ------------------------------------------------------------ */

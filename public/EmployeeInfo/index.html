@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LT Employee Info</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!------------------------- NAVEGATION BAR --------------------------->
+    <div class="nav-bar-container">
+        <nav class="nav-bar">
+            <div class="nav-logo">
+                <h1>LaborTrack</h1>
+            </div>
+            <ul class="nav-links">
+                <li><a href="../Main/index.html">Home</a></li>
+                <li><a href="">Logout</a></li>
+            </ul>
+        </nav>
+    </div>
+    <!-------------------------------------------------------------------->
+    
+    <!--======================== Main Content ==========================-->
+    <div class="main-content">
+
+        <!-------------------------- Left Panel ------------------------------>
+        <div class="left-panel-container">
+
+        </div>
+        <!-------------------------------------------------------------------->
+        
+        <!------------------------- Middle Panel ----------------------------->
+        <div class="middle-panel-container">
+            <!-- <div class="employee-info-section">
+                <img src="../Images/Screenshot 2024-02-27 225308.png" alt="Employee Photo" class="employee-photo">
+                <div class="employee-details">
+                    <h2>John Markien</h2>
+                    <p><strong>Date of Birth:</strong> 07/16/2002</p>
+                    <p><strong>Age:</strong> 22</p>
+                    <p><strong>Position:</strong> Software Engineer</p>
+                    <p><strong>Department:</strong> Engineering</p>
+                    <p><strong>Hourly Wage:</strong> $45.5</p>
+                    <p><strong>Email:</strong> John@gmail.com</p>
+                    <p><strong>Phone Number: </strong> 347-582-5005</p>
+                    <p><strong>Address:</strong> 1234 Tech Blvd, NYC, NY, 10039</p>
+                </div>
+            </div> -->
+            <div id="employeeList" class="employee-list-container"></div>
+        
+        <!-------------------------------------------------------------------->
+        
+        <!------------------------- Right Panel ------------------------------>
+        <div class="right-panel-container">
+
+        </div>
+        <!-------------------------------------------------------------------->
+    
+    </div>
+    <!--================================================================-->
+    <script>
+        async function loadEmployees() {
+            const companyId = localStorage.getItem("companyId");
+            if (!companyId) {
+            alert("You must be logged in.");
+            return;
+            }
+
+            const response = await fetch(`http://localhost:8080/employees?companyId=${companyId}`);
+            const employees = await response.json();
+            const container = document.getElementById("employeeList");
+            container.innerHTML = "";
+
+            if (!employees || employees.length === 0) {
+            container.innerHTML = "<p>No employees found for this company.</p>";
+            return;
+            }
+
+            employees.forEach(emp => {
+            const card = document.createElement("div");
+            card.className = "employee-info-section";
+
+            card.innerHTML = `
+                <img src="../Images/default-user.png" alt="Employee Photo" class="employee-photo">
+                <div class="employee-details">
+                <h2>${emp.person.name}</h2>
+                <p><strong>Date of Birth:</strong> ${emp.person.month}/${emp.person.day}/${emp.person.year}</p>
+                <p><strong>Position:</strong> ${emp.jobDetails.position}</p>
+                <p><strong>Department:</strong> ${emp.jobDetails.department}</p>
+                <p><strong>Hourly Wage:</strong> $${emp.jobDetails.hourlyWage.toFixed(2)}</p>
+                <p><strong>Email:</strong> ${emp.contactInfo.email}</p>
+                <p><strong>Phone Number:</strong> ${emp.contactInfo.phoneNumber}</p>
+                <p><strong>Address:</strong> ${emp.contactInfo.address}</p>
+                </div>
+            `;
+
+            container.appendChild(card);
+
+            const historyTable = document.createElement("table");
+            historyTable.className = "punch-table";
+
+            const thead = `
+            <thead>
+                <tr>
+                <th>Punch In</th>
+                <th>Punch Out</th>
+                </tr>
+            </thead>
+            `;
+            historyTable.innerHTML = thead;
+
+            const tbody = document.createElement("tbody");
+            historyTable.appendChild(tbody);
+
+            // Load punch history
+            fetch(`http://localhost:8080/punches/${emp.employeeID}`)
+            .then(res => res.json())
+            .then(records => {
+                const punchSection = document.createElement("div");
+                punchSection.className = "punch-history-wrapper";
+
+                const title = document.createElement("h3");
+                title.textContent = "Punch History";
+                punchSection.appendChild(title);
+
+                const countDisplay = document.createElement("p");
+                countDisplay.innerText = `Total Punches: ${records.length}`;
+                punchSection.appendChild(countDisplay);
+
+                if (!Array.isArray(records) || records.length === 0) {
+                    tbody.innerHTML = "<tr><td colspan='2'>No punch history found.</td></tr>";
+                } else {
+                    records.reverse().forEach(r => {
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `
+                        <td>${new Date(r.punchIn).toLocaleString()}</td>
+                        <td>${new Date(r.punchOut).toLocaleString()}</td>
+                    `;
+                    tbody.appendChild(tr);
+                    });
+                }
+
+                punchSection.appendChild(historyTable);
+                card.appendChild(punchSection);
+            });
+
+        window.onload = loadEmployees;
+    </script>
+</body>
+</html>

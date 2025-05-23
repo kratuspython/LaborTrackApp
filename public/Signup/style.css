@@ -1,0 +1,112 @@
+body {
+    padding: 0px;
+    margin: 0px;
+    background-image: url("../Images/login-background-img.jpg");
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+    height: 100vh;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Poppins', sans-serif;
+}
+body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 100vw;
+    backdrop-filter: blur(4px); /*blur*/
+    -webkit-backdrop-filter: blur(4px); /*blur*/
+    z-index: -1;
+    background: rgba(0, 0, 0, 0.3); /*tint*/
+    backdrop-filter: blur(4px);
+}
+form {
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+}
+label[for="name"], label[for="email"], label[for="password"], label[for="confirm-password"] {
+    padding: 10px 0px;
+    font-size: 18px;
+}
+input[type="name"], input[type="email"], input[type="password"] {
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+    font-size: 18px;
+}
+
+button {
+    padding: 10px;
+    margin: 40px 0px 0px 0px;
+    border: none;
+    border-radius: 8px;
+    background-color: #1d79f2;
+    font-size: 18px;
+    color: white;
+}
+
+button:hover {
+    background-color: #0d5ed1;
+}
+@media (max-width: 768px) {
+    .signup-container {
+      flex-direction: column;
+      padding: 20px;
+    }
+    .title-info, .signup-box {
+        width: 100%;
+        margin: 20px 0;
+        text-align: center;
+      }
+}
+@media (max-width: 1024px) {
+    .signup-container {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+}
+.signup-container {
+    display:flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 80%;
+    padding: 20px;
+}
+.tittle-info h1 {
+    font-size: 50px;
+    padding: 10px 0px;
+    margin: 0px 0px 15px 0px;
+}
+.tittle-info p {
+    font-size: 20px;
+    line-height: 1.4;
+    margin: 0px;
+}
+
+.tittle-info {
+    padding: 20px;
+    margin: 0px 0px 60px 40px;
+    color: #F0F0F0;
+    width: 40%;
+}
+
+.signup-box h2 {
+    font-size: 36px;
+    text-align: center;
+}
+.signup-box {
+    background-color: white;
+    margin: 0px 0px 0px 40px;
+    padding: 30px;
+    border: none;
+    border-radius: 8px;
+    font-size: 18px;
+    width: 30%;
+}

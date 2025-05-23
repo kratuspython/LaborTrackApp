@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LT Add Employee</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+</head>
+<!------------------------- NAVEGATION BAR --------------------------->
+<div class="nav-bar-container">
+    <nav class="nav-bar">
+        <div class="nav-logo">
+            <h1>LaborTrack</h1>
+        </div>
+        <ul class="nav-links">
+            <li><a href="../Main/index.html">Home</a></li>
+            <li><a href="">Logout</a></li>
+        </ul>
+    </nav>
+</div>
+<!--======================== MAIN CONTENT ========================-->
+ <div class="main-content">
+     <!------------------------- LEFT PANEL ------------------------>
+    <div class="left-panel-container">
+        <!-- EMPTY -->
+    </div>
+    <!------------------------- MIDDLE PANEL ------------------------------>
+    <div class="middle-panel-container">
+        <div class="add-employee-form">
+            <h2>Add Employee</h2>
+            <form>
+                <!-- Profile Image -->
+                <div class="image-upload">
+                    <label for="profilePic">
+                      <div class="image-circle">
+                        <img id="preview-image" src="Images/default-user.png" alt="Profile Image">
+                      </div>
+                    </label>
+                    <input id="profilePic" type="file" accept="image/*">
+                </div>
+                <!-- Name -->
+                <div class="input-group">
+                    <label for="name">Name</label>
+                    <input id="name" type="text" id="name" placeholder="Name" required>
+                </div>
+                <!-- Datebirth -->
+                <div class="input-group">
+                    <label>Date of Birth</label>
+                    <input id="dateBirth" type="date" maxlength="4" placeholder="YYYY" required>
+                </div>
+                <!-- Job Details -->
+                <div class="input-group">
+                    <label>Job Details</label>
+                    <input id="position" type="text" placeholder="Position" required>
+                    <input id="department" type="text" placeholder="Department" required>
+                    <input id="hourlyWage" type="number" step="0.01" placeholder="Hourly Wage ($)" required>
+                </div>
+                <!-- Contact Information -->
+                <div class="input-group">
+                    <label>Contact Information</label>
+                    <input id="email" type="email" placeholder="Email" required>
+                    <input id="phoneNumber" type="text" id="" placeholder="Phone Number" required>
+                    <input id="address" type="text" id="" placeholder="Address, City, State, Zip" required>
+                </div>
+                <!-- Button -->
+                <div class="form-button">
+                    <button class="submit-button" type="submit">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!--------------------------- RIGHT PANEL ---------------------------------->
+    <div class="right-panel-container">
+        <!-- EMPTY -->
+    </div>
+ </div>
+
+ <!----------------------- JAVASCRIPT --------------------->
+ <script>
+    document.getElementById('profilePic').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          document.getElementById('preview-image').src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    document.querySelector("form").addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        // Get companyId from localStorage
+        const companyId = localStorage.getItem("companyId");
+        if (!companyId) {
+            alert("⚠️ You must be logged in first.");
+            return;
+        }
+
+        // Parse birth date into day, month, year
+        const birthDate = new Date(document.getElementById("dateBirth").value);
+        const day = birthDate.getDate();
+        const month = birthDate.getMonth() + 1; // 0-indexed in JS
+        const year = birthDate.getFullYear();
+
+        // Build employee object
+        const employee = {
+            person: {
+            name: document.getElementById("name").value,
+            day: day,
+            month: month,
+            year: year,
+            profilePic: "default.jpg" 
+            },
+            jobDetails: {
+            position: document.getElementById("position").value,
+            department: document.getElementById("department").value,
+            hourlyWage: parseFloat(document.getElementById("hourlyWage").value)
+            },
+            contactInfo: {
+            email: document.getElementById("email").value,
+            phoneNumber: document.getElementById("phoneNumber").value,
+            address: document.getElementById("address").value
+            }
+        };
+
+        //POST to Spark API
+        const response = await fetch(`http://localhost:8080/employee?companyId=${companyId}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(employee)
+        });
+
+        const result = await response.text();
+
+        if (response.ok) {
+            alert("✅ Employee added successfully!");
+            document.querySelector("form").reset();
+            document.getElementById("preview-image").src = "Images/default-user.png"; // Reset image preview
+        } else {
+            alert("Failed to add employee: " + result);
+        }
+    });
+</script>
+</body>
+
+</html>

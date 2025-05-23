@@ -1,0 +1,160 @@
+body {
+    margin: 0px;
+    padding: 0px;
+    background-color: #f0f1f6;
+    display:block;
+    font-family: 'Poppins', sans-serif;
+}
+
+/* -------------- Navegation Bar ------------------- */
+.nav-bar-container {
+    width: 100%;
+}
+.nav-bar {
+    display: flex;
+    top: 0;
+    left: 0;
+    right: 0;
+    justify-content: space-between;
+    align-items: center;
+    height: 80px;
+    width: 100%;
+    position: fixed;
+    background-color: #1d1d1d;
+    padding: 10px 40px 10px 30px;
+}
+.nav-logo {
+    font-size: 25px;
+    font-weight: 600;
+    margin: 0 0 0 3%;
+    color: white;
+}
+.nav-links {
+    list-style: none;
+    display: flex;
+    gap: 30px;
+    padding: 0;
+    margin: 0 8% 0 0;
+}
+.nav-links li a {
+    color: #f0f0f0;
+    text-decoration: none; 
+    font-size: 18px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: background-color 0.3s ease;
+}
+.nav-links li a:hover,
+.nav-links lia a.active {
+    background-color: #333;
+}
+/* -------------------------------------------------- */
+
+/* ===================== Main Content =============== */
+.main-content {
+    width: 100%;
+    margin: 100px 0 0 0;
+    display: flex;
+    text-align: center;
+}
+
+/* ------------------- Left Container --------------- */
+.left-panel-container {
+    width: 17.5%;
+}
+/* -------------------------------------------------- */
+
+/* ----------------- Middle Container --------------- */
+.middle-panel-container {
+    width: 65%;
+    padding: 30px;
+    background-color: white;
+    border: none;
+    border-radius: 6px;
+}
+.employee-info-section {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    margin: 0 0 30px 0;
+}
+
+.employee-photo {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #2a56f5;
+    margin: 30px 15px 15px 15px;
+}
+
+.employee-details h2 {
+    margin: 0 0 15px 0;
+}
+
+.employee-details p {
+    margin: 4px 0;
+    font-size: 16px;
+    text-align: left;
+}
+.punch-history-wrapper {
+  text-align: left;
+  margin-top: 10px;
+}
+
+.punch-history-wrapper h3 {
+  margin-bottom: 10px;
+  font-size: 18px;
+  color: #1d1d1d;
+}
+.punch-history-wrapper p {
+  font-weight: 500;
+  margin-top: 5px;
+  color: #333;
+}
+.punch-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 14px;
+}
+
+.punch-table th, .punch-table td {
+  border: 1px solid #ccc;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.punch-table th {
+  background-color: #f0f1f6;
+  font-weight: bold;
+}
+
+/* .wage-history-section h3 {
+    margin-bottom: 10px;
+    text-align: left;
+} */
+
+/* .wage-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+} */
+
+/* .wage-table th,
+.wage-table td {
+    border: 1px solid #ccc;
+    padding: 8px 12px;
+    font-size: 14px;
+}
+
+.wage-table th {
+    background-color: #f0f1f6;
+} */
+/* -------------------------------------------------- */
+
+/* ------------------ Right Container --------------- */
+.right-panel-container {
+    width: 17.5%;
+}
+/* -------------------------------------------------- */

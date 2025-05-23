@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LT Delete Employee</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!------------------------- NAVEGATION BAR --------------------------->
+    <div class="nav-bar-container">
+        <nav class="nav-bar">
+            <div class="nav-logo">
+                <h1>LaborTrack</h1>
+            </div>
+            <ul class="nav-links">
+                <li><a href="../Main/index.html">Home</a></li>
+                <li><a href="">Logout</a></li>
+            </ul>
+        </nav>
+    </div>
+    <!-------------------------------------------------------------------->
+
+    <!--======================== MAIN CONTENT ========================-->
+    <div class="main-content">
+
+        <!------------------------- Left Panel ------------------------------->
+        <div class="left-panel-container">
+            <h3>Find & Delete Employee</h3>
+
+            <!-- Search Input -->
+            <input id="employeeId" type="text" class="search-input" placeholder="Search by ID, Name, position, etc.">
+            
+            <!-- Search button -->
+            <button class="search-button">Search</button>
+
+        </div>
+        <!-------------------------------------------------------------------->
+
+        <!------------------------- middle Content ----------------------------->
+        <div id="employeeCards" class="middle-panel-container">
+            <!-- employee cards will load here -->
+        </div>
+        <!-------------------------------------------------------------------->
+
+        <!------------------------- Right Panel ------------------------------>
+        <div class="right-panel-container">
+            <div id="miniInfo">
+                <h3>Selected Employee</h3>
+                <img id="miniPhoto" src="../Images/default-user.png" class="mini-photo" alt="Profile">
+                <p id="miniName">Name: —</p>
+                <p id="miniPosition">Position: —</p>
+                <p id="miniDepartment">Department: —</p>
+                <p id="miniEmail">Email: —</p>
+            </div>
+        </div>
+        <!-------------------------------------------------------------------->
+
+    </div>
+    <!--================================================================-->
+    <script>
+        async function loadEmployees() {
+            const companyId = localStorage.getItem("companyId");
+            if (!companyId) {
+                alert("No company ID found.");
+                return;
+            }
+
+            const response = await fetch(`http://localhost:8080/employees?companyId=${companyId}`);
+            const employees = await response.json();
+            const container = document.getElementById("employeeCards");
+            container.innerHTML = "";
+
+            employees.forEach(emp => {
+                const card = document.createElement("div");
+                card.className = "employee-card";
+                card.setAttribute("data-id", emp.employeeID);
+
+                card.innerHTML = `
+                <img src="../Images/default-user.png" class="employee-photo">
+                <div class="employee-info">
+                    <h3>${emp.person.name}</h3>
+                    <p>${emp.jobDetails.position}</p>
+                    <button class="delete-btn">Delete</button>
+                </div>
+                `;
+
+                // Click: Show in right panel
+                card.addEventListener("click", () => {
+                document.getElementById("miniPhoto").src = "../Images/default-user.png";
+                document.getElementById("miniName").innerText = "Name: " + emp.person.name;
+                document.getElementById("miniPosition").innerText = "Position: " + emp.jobDetails.position;
+                document.getElementById("miniDepartment").innerText = "Department: " + emp.jobDetails.department;
+                document.getElementById("miniEmail").innerText = "Email: " + emp.contactInfo.email;
+                });
+
+                // Delete: Confirm and send request
+                card.querySelector(".delete-btn").addEventListener("click", async (e) => {
+                e.stopPropagation();
+                const confirmDelete = window.confirm(`Are you sure you want to delete ${emp.person.name}?`);
+                if (!confirmDelete) return;
+
+                const res = await fetch(`http://localhost:8080/employee/${emp.employeeID}`, { method: "DELETE" });
+                if (res.ok) {
+                    card.remove();
+                    alert("Employee deleted.");
+                } else {
+                    alert("Failed to delete employee.");
+                }
+        });
+
+    container.appendChild(card);
+    });
+    }
+    </script>
+    <script>
+        document.querySelector(".search-button").addEventListener("click", () => {
+            const searchValue = document.getElementById("employeeId").value.trim().toLowerCase();
+
+            const cards = document.querySelectorAll(".employee-card");
+
+            cards.forEach(card => {
+            const content = card.textContent.toLowerCase();
+            card.style.display = content.includes(searchValue) ? "flex" : "none";
+            });
+        });
+    </script>
+</body>
+</html>
