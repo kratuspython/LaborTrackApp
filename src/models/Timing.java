@@ -1,6 +1,6 @@
-import java.time.LocalDateTime;
-import java.time.LocalTime;
+package models;
 import java.time.Duration;
+import java.time.LocalDateTime;
 
 
 public class Timing {

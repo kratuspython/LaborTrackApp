@@ -1,8 +1,8 @@
 body {
     margin: 0px;
-    padding: 0px;
+    padding: 1rem;
     background-color: #f0f1f6;
-    display:block;
+    gap: 1rem;
     font-family: 'Poppins', sans-serif;
 }
 
@@ -102,24 +102,16 @@ body {
 .middle-panel-container {
     width: 65%;
     padding: 20px;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    align-items: flex-start;
     gap:20px;
     background-color: white;
     box-sizing: border-box;
 }
 .employee-card {
-    background-color: white;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    padding: 16px;
-    gap: 16px;
-    box-sizing: border-box;
-    flex-shrink: 0;
-    height: 100%;
-    align-self: start;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 2px 2px 6px rgba(0,0,0,0.1);
+  cursor: pointer;
 }
 .employee-photo {
     width: 80px;
@@ -163,3 +155,69 @@ body {
     color: black;
 }
 /* ------------------------------------------------------------ */
+
+#employeeList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+  background: white;
+}
+
+.container {
+  display: grid;
+  grid-template-columns: 2fr 1fr; /* adjust as needed */
+  gap: 1rem;
+}
+.middle-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;            /* space between cards */
+  justify-content: flex-start;
+}
+.employee-card {
+    border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 0.75rem;
+  box-shadow: 1px 1px 6px rgba(0,0,0,0.1);
+  cursor: pointer;
+  background: #fff;
+}
+.employee-card img.profile-pic {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  margin: 0 auto 0.5rem;
+}
+.employee-card button.punch-btn {
+  width: 100%;
+  padding: 0.5rem;
+  border: none;
+  background: #007bff;
+  color: white;
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+  cursor: pointer;
+}
+.employee-card button.punch-btn.out {
+  background: #dc3545;
+}
+.right-panel {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1rem;
+  height: fit-content;
+}
+.employee-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+}
+.status-panel {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #f9f9f9;
+  height: fit-content;
+}

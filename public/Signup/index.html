@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LaborTrack Sign Up</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/signup/style.css" />
     <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -17,7 +17,7 @@
         </div>
         <div class="signup-box">
             <h2>Sign Up</h2>
-            <form>
+            <form id="signupForm">
                 <label for="name">Company Name</label>
                 <input id="companyName"type="name" id="companyName" placeholder="Enter company name" required>
                 <label for="email">Email</label>
@@ -27,45 +27,52 @@
                 <label for="confirm-password">Confirm Password</label>
                 <input id="confirmPassword" type="password" placeholder="Confirm password" required>
                 <br>
-                <button id="signupForm" class="signup-button">Sign Up</button>
+                <button id="signup-button" class="signup-button">Sign Up</button>
             </form>
         </div>
     </div>
 
     <!-- JS -->
     <script>
-        document.getElementById("signupForm").addEventListener("submit", async function (event) {
-            event.preventDefault();
+        document.getElementById("signupForm").addEventListener("submit", async function (e) {
+            e.preventDefault();
 
-            const password = document.getElementById("password").value;
-            const confirmPassword = document.getElementById("confirmPassword").value;
+            const name  = document.getElementById("companyName").value.trim();
+            const email = document.getElementById("email").value.trim();
+            const pwd   = document.getElementById("password").value;
+            const cpwd  = document.getElementById("confirmPassword").value;
 
-            if (password !== confirmPassword) {
-                alert("Passwords do not match.");
+            if (pwd !== cpwd) {
+                alert("❌ Passwords do not match.");
                 return;
             }
 
-            const company = {
-                companyName: document.getElementById("companyName").value,
-                email: document.getElementById("email").value,
-                password: password
+            const payload = {
+                companyName: name,
+                email: email,
+                password: pwd
             };
-
-            const response = await fetch("http://localhost:8080/register", {
+             // http://localhost:8088/register
+            try {
+                const res = await fetch("/api/register", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(company)
-            });
-
-            const result = await response.text();
-
-            if (response.ok) {
-                alert("Company registered!");
-                window.location.href = "../Login/index.html"; // go to login
-            } else {
-                alert("Company registration Failed " + result);
+                credentials: "include",   // so session cookie can be set
+                body: JSON.stringify(payload)
+                });
+                const text = await res.text();
+                if (res.ok) {
+                alert("✅ Company registered! Redirecting to Dashboard...");
+                // optionally auto-login and go to main
+                window.location.href = "/Main/index.html";
+                } else {
+                alert("❌ Registration failed: " + text);
+                }
+            } catch (err) {
+                console.error("Network error:", err);
+                alert("❌ Could not contact server.");
             }
         });
-  </script>
+    </script>
 </body>
 </html>

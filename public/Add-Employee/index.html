@@ -78,71 +78,58 @@
 
  <!----------------------- JAVASCRIPT --------------------->
  <script>
-    document.getElementById('profilePic').addEventListener('change', function(e) {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function(event) {
-          document.getElementById('preview-image').src = event.target.result;
-        };
-        reader.readAsDataURL(file);
+  // 1️⃣ Read the companyId from the page’s URL (or default to 1)
+  const params    = new URLSearchParams(window.location.search);
+  const companyId = params.get('companyId') || 1;
+
+  // 2️⃣ Hook your form submit
+  const form = document.getElementById('employeeForm');
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    // 3️⃣ Build the employee payload exactly as your backend expects
+    const employee = {
+      person: {
+        name:        document.getElementById('name').value,
+        day:         parseInt(document.getElementById('day').value, 10),
+        month:       parseInt(document.getElementById('month').value, 10),
+        year:        parseInt(document.getElementById('year').value, 10),
+        profileImage: document.getElementById('profileImage').value
+      },
+      jobDetails: {
+        position:    document.getElementById('position').value,
+        department:  document.getElementById('department').value,
+        hourlyWage:  parseFloat(document.getElementById('wage').value)
+      },
+      contactInfo: {
+        email:       document.getElementById('email').value,
+        phoneNumber: document.getElementById('phone').value,
+        address:     document.getElementById('address').value
       }
-    });
+    };
 
-    document.querySelector("form").addEventListener("submit", async function (event) {
-        event.preventDefault();
+    // 4️⃣ Send to the correct endpoint with your companyId
+    const url = `http://localhost:8088/employee?companyId=${companyId}`;
+    console.log('Posting to:', url, employee);  // <-- DEV: check your console
 
-        // Get companyId from localStorage
-        const companyId = localStorage.getItem("companyId");
-        if (!companyId) {
-            alert("⚠️ You must be logged in first.");
-            return;
-        }
-
-        // Parse birth date into day, month, year
-        const birthDate = new Date(document.getElementById("dateBirth").value);
-        const day = birthDate.getDate();
-        const month = birthDate.getMonth() + 1; // 0-indexed in JS
-        const year = birthDate.getFullYear();
-
-        // Build employee object
-        const employee = {
-            person: {
-            name: document.getElementById("name").value,
-            day: day,
-            month: month,
-            year: year,
-            profilePic: "default.jpg" 
-            },
-            jobDetails: {
-            position: document.getElementById("position").value,
-            department: document.getElementById("department").value,
-            hourlyWage: parseFloat(document.getElementById("hourlyWage").value)
-            },
-            contactInfo: {
-            email: document.getElementById("email").value,
-            phoneNumber: document.getElementById("phoneNumber").value,
-            address: document.getElementById("address").value
-            }
-        };
-
-        //POST to Spark API
-        const response = await fetch(`http://localhost:8080/employee?companyId=${companyId}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(employee)
-        });
-
-        const result = await response.text();
-
-        if (response.ok) {
-            alert("Employee added successfully!");
-            document.querySelector("form").reset();
-            document.getElementById("preview-image").src = "Images/default-user.png"; // Reset image preview
-        } else {
-            alert("Failed to add employee: " + result);
-        }
-    });
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(employee)
+      });
+      const text = await res.text();
+      if (res.ok) {
+        alert('Employee added successfully!');
+        window.location.href = `../Main/index.html?companyId=${companyId}`; // redirect back
+      } else {
+        alert('Failed to add employee: ' + text);
+      }
+    } catch (err) {
+      console.error('Network error:', err);
+      alert('Network error: ' + err.message);
+    }
+  });
 </script>
 </body>
 

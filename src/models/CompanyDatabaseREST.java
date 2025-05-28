@@ -1,3 +1,5 @@
+package models;
+import db.LaborTrackDBConnector; 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -242,7 +244,64 @@ public class CompanyDatabaseREST {
         return null; // no employee found!
     }
     
-    
+    // Insert a punch in record
+    public boolean punchIn(Employee e, LocalDateTime punchIn) {
+        String command = "INSERT INTO punch_records (employee_id, punch_in, punch_out, duration_minutes) VALUES (?, ?, NULL, NULL)";
+        try {
+            pstmt = connect.prepareStatement(command);
+
+            pstmt.setInt(1, e.getEmployeeID());
+            pstmt.setString(2, punchIn.toString());
+            return pstmt.executeUpdate() == 1;
+        } catch (SQLException ex) {
+            System.out.println("❌ Error punching in: " + ex.getMessage());
+            return false;
+        }
+    }
+
+    // Insert a punch out record: Record the end of a shift by updating the most recent NULL punch_out for this employee. Also, fills in duration_minutes.
+    public boolean punchOut(Employee e, LocalDateTime outTime) {
+        // 1️⃣ Find the most recent open punch record
+        String command = "" +
+        "SELECT punch_id, punch_in " +
+        "FROM punch_records " +
+        "WHERE employee_id = ? AND punch_out IS NULL " +
+        "ORDER BY punch_in DESC " +
+        "LIMIT 1";
+        try {
+            pstmt = connect.prepareStatement(command);
+            pstmt.setInt(1, e.getEmployeeID());
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (!rs.next()) {
+                    System.out.println("❌ No open punch-in found for emp " + e.getEmployeeID());
+                    return false;
+                }
+                int recId = rs.getInt("punch_id");
+                LocalDateTime inTime = LocalDateTime.parse(rs.getString("punch_in"));
+
+                // 2️⃣ Compute duration
+                long minutes = Duration.between(inTime, outTime).toMinutes();
+
+                // 3️⃣ Update that single record
+                String command2 = 
+                "UPDATE punch_records " +
+                "   SET punch_out = ?, duration_minutes = ? " +
+                " WHERE punch_id = ?";
+                try (PreparedStatement pu = connect.prepareStatement(command2)) {
+                    pu.setString(1, outTime.toString());
+                    pu.setLong(2, minutes);
+                    pu.setInt(3, recId);
+                    int rows = pu.executeUpdate();
+                    return rows == 1;
+                }
+            }
+        } catch (Exception ex) {
+            // print full stack for easier debugging
+            ex.printStackTrace();
+            return false;
+        }
+    }
+
     // Insert a punching record
     public boolean insertPunchRecord(Employee e, LocalDateTime punchIn, LocalDateTime punchOut) {
         String command = "INSERT INTO punch_records (employee_id, punch_in, punch_out, duration_minutes) VALUES (?, ?, ?, ?)";
@@ -264,9 +323,8 @@ public class CompanyDatabaseREST {
         }
     }
     
-    
     // Read all punching records from an employee
-    public List<String> readAllPunchingRecordsFromAEmployee(Employee e) {
+    public List<String> readPunchHistory(Employee e) {
         List<String> records = new ArrayList<>();
         String query = "SELECT * FROM punch_records WHERE employee_id = ?";
 

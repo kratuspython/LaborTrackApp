@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LaborTrack Login</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/login/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -28,52 +28,37 @@
         </div>
     </div>
     <script>
-      window.onload = function () {
-        document.getElementById("loginForm").addEventListener("submit", async function (event) {
-  event.preventDefault();
+      window.addEventListener("DOMContentLoaded", () => {
+        const form = document.getElementById("loginForm");
 
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
+        form.addEventListener("submit", async e => {
+          e.preventDefault();
+          const email    = document.getElementById("email").value.trim();
+          const password = document.getElementById("password").value;
 
-  const loginData = {
-    email: email,
-    password: password
-  };
+          try {
+            const res = await fetch("/api/login", {
+              method:      "POST",
+              headers:     { "Content-Type": "application/json" },
+              credentials: "include",
+              body:        JSON.stringify({ email, password })
+            });
 
-  try {
-    const response = await fetch("/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(loginData)
-  });
-    event.preventDefault();
-    const resultText = await response.text();
-    console.log("Raw server response:\n", resultText);
-    let result;
+            console.log("↩️ /login status:", res.status);
 
-    try {
-      result = JSON.parse(resultText);  // safely try to parse
-    } catch (parseErr) {
-      console.error("❌ Invalid JSON from server:", resultText);
-      alert("❌ Server returned invalid response.");
-      return;
-    }
-
-    if (response.ok && !result.error) {
-      alert("✅ Login successful!");
-      localStorage.setItem("companyId", result.companyID);
-      window.location.href = "../Dashboard/index.html";
-    } else {
-      alert("❌ " + (result.error || "Invalid login"));
-    }
-
-  } catch (err) {
-    console.error("Login error:", err);
-    alert("❌ Failed to connect to server.");
-  }
-  });
-};
-  </script>
+            if (res.ok) {
+              window.location.href = "/Main/index.html";
+            } else {
+              const errText = await res.text();
+              alert("Login failed: " + errText);
+            }
+          } catch (err) {
+            console.error("Network error:", err);
+            alert("Login failed: network error");
+          }
+        });
+      });
+    </script>
 </body>
 </html>
 

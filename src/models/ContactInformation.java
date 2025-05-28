@@ -1,4 +1,4 @@
-
+package models;
 public class ContactInformation {
 	private String email;
 	private String phoneNumber;

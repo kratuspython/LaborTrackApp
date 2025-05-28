@@ -1,5 +1,15 @@
-import static spark.Spark.*;
+package api;
 
+import models.Timing;
+import models.Company;
+import models.Employee;
+import models.Person;
+import models.JobDetails;
+import models.ContactInformation;
+import models.CompanyDatabaseREST;
+
+import static spark.Spark.*;
+import spark.Route; 
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -24,7 +34,6 @@ public class APIServer {
     	// Set the server to listen to localhost:8080
         port(8088);
         
-        port(8088);
         String staticDir = Paths.get("public").toAbsolutePath().toString();
         System.out.println("Static files being served from: " + staticDir);
         staticFiles.externalLocation(staticDir);
@@ -43,108 +52,188 @@ public class APIServer {
         CompanyDatabaseREST db = new CompanyDatabaseREST();
         
         
-        // 7. authenticate a company login
-        post("/login", (req, res) -> {
+        // 1️⃣ authenticate a company login
+        post("/api/login", (Route) (req, res) -> {
             res.type("application/json");
             System.out.println("✅ /login route hit");
-            System.out.println("Headers: " + req.headers());
             System.out.println("Body: " + req.body());
 
-            LoginWrapper wrapper;
-            try {
-                wrapper = gson.fromJson(req.body(), LoginWrapper.class);
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                res.status(400);
-                return gson.toJson(new ResponseError("Invalid JSON format"));
-            }
-
+            System.out.println("Here");
+            // 1) parse + validate
+            LoginWrapper wrapper = gson.fromJson(req.body(), LoginWrapper.class);
             if (wrapper == null || wrapper.email == null || wrapper.password == null) {
                 res.status(400);
                 return gson.toJson(new ResponseError("Missing credentials"));
             }
-
+            
+            // 2) authenticate
             Company company = db.authenticate(wrapper.email, wrapper.password);
-            if (company != null) {
-                company.setEmployees(db.readAllEmployeesFromACompany(company));
-                company.setPassword(null);
-                res.status(200);
-                return gson.toJson(company);
-            } else {
+            if (company == null) {
                 res.status(401);
                 return gson.toJson(new ResponseError("Invalid email or password"));
             }
+
+            
+            // 3) store companyId *before* we return
+            req.session(true).attribute("companyId", company.getCompanyID());
+            System.out.println("🔐 Stored companyId = " + company.getCompanyID());
+
+            // 4) hide the password (optional) and return success
+            company.setPassword(null);
+            res.status(200);
+            return gson.toJson(company);
+        });
+
+        // 2️⃣ logout end sesion:
+        post("/api/logout", (Route) (req, res) -> {
+            // invalidate the session on the server
+            req.session().invalidate();
+            res.status(200);
+            return "";  // empty body is fine
         });
         
-        // 1. Test Route: confirm server is working
-        get("/hello", (req, res) -> {
-            return gson.toJson("Spark is working!");
-        });
-        
-        // 2. Get all employees of a company
-        get("/employees", (req, res) -> {
-        	System.out.println("It gets to /employees route");
-        	// Extract the companyId from the query parameters
-        	String companyIdStr = req.queryParams("companyId");
-        	
-        	// If companyId is not provided, return 400 (bad request)
-        	if (companyIdStr == null) {
-        		res.status(400);
-        		return gson.toJson("Missing companyID param");
-        	}
-        	
-        	// Attempt to convert companyId from str to int
-        	int companyId;
-        	try {
-        		companyId = Integer.parseInt(companyIdStr);
-        	}
-        	catch (NumberFormatException e) {
+        // 3️⃣ Register a new Company
+        post("/api/register", (Route) (req, res) -> {
+            res.type("application/json");
+
+            // 1️⃣ Parse the incoming JSON
+            RegisterWrapper w = gson.fromJson(req.body(), RegisterWrapper.class);
+            if (w.companyName == null || w.email == null || w.password == null) {
                 res.status(400);
-                return gson.toJson("Invalid companyId format");
+                return "Missing required fields";
             }
-        	
-        	// Create a placeHolder company object 
-        	Company fakeCompany = new Company("placeholder", "none@none.com", "");
-        	fakeCompany.setCompanyID(companyId);
-        	
-        	// Retrieve all employees for the given company from the DB
-        	List<Employee> employees = db.readAllEmployeesFromACompany(fakeCompany);
-        	
-        	// Convert the employee list to JSON and return it as a response
-        	return gson.toJson(employees);
+
+            // 2️⃣ Create the new company in your DB
+            Company newCompany = new Company(w.companyName, w.email, w.password);
+            Company created = db.registerCompany(newCompany);
+
+            if (created != null && created.getCompanyID() > 0) {
+                // 3️⃣ Auto-login: store in session
+                req.session(true).attribute("companyId", created.getCompanyID());
+                res.status(201);
+                return gson.toJson(created);
+            } else {
+                res.status(500);
+                return "Failed to register company";
+            }
+        });
+
+        // 4️⃣ Get all employees of a company
+        get("/api/employees", (Route) (req, res) -> {        
+            res.type("application/json");
+            Integer companyId = req.session().attribute("companyId");
+            System.out.println("🔍 [DEBUG] /employees session companyId = " + companyId);
+            if (companyId == null) {
+                res.status(401);
+                return gson.toJson("Not logged in");
+            }
+
+            // 2) Fetch only that company’s employees
+            Company current = new Company("","", "");
+            current.setCompanyID(companyId); 
+            List<Employee> emps = db.readAllEmployeesFromACompany(current);
+
+            // 3) Return them
+            return gson.toJson(emps);
         });
         
+        // 5️⃣ Add Punch In Time to an employee
+        post("/api/punchin", (Route) (req, res) -> {
+            res.type("application/json");
+            // 1️⃣ read empId from query
+            String empIdStr = req.queryParams("empId");
+            if (empIdStr == null) {
+                res.status(400);
+                return gson.toJson("Missing empId");
+            }
+            int empId = Integer.parseInt(empIdStr);
+
+            // 2️⃣ build minimal Employee wrapper
+            Employee emp = new Employee();
+            emp.setEmployeeID(empId);
+
+            // 3️⃣ call your DAO
+            boolean ok = db.punchIn(emp, LocalDateTime.now());
+
+            // 4️⃣ respond appropriately
+            if (ok) {
+                res.status(201);
+                return gson.toJson("Punch-in recorded");
+            } else {
+                res.status(500);
+                return gson.toJson("Failed to record punch-in");
+            }
+        });
+
+        // 6️⃣ Add Punch Out time and closing a punching record (punchIn, PunchOut, Duration) for an employee
+        post("/api/punchout", (Route) (req, res) -> {
+            res.type("application/json");
+            String empIdStr = req.queryParams("empId");
+            if (empIdStr == null) {
+                res.status(400);
+                return gson.toJson("Missing empId");
+            }
+            int empId = Integer.parseInt(empIdStr);
+
+            Employee emp = new Employee();
+            emp.setEmployeeID(empId);
+
+            boolean ok = db.punchOut(emp, LocalDateTime.now());
+
+            if (ok) {
+                res.status(200);
+                return gson.toJson("Punch-out recorded");
+            } else {
+                res.status(500);
+                return gson.toJson("Failed to record punch-out");
+            }
+        });
+
+        // 7️⃣ Get punch History from an employee
+        get("/api/punches", (Route) (req, res) -> {
+            res.type("application/json");
+            String empIdStr = req.queryParams("empId");
+            if (empIdStr == null) {
+                res.status(400);
+                return gson.toJson("Missing empId");
+            }
+            int empId = Integer.parseInt(empIdStr);
+
+            Employee emp = new Employee();
+            emp.setEmployeeID(empId);
+
+            // returns List<Timing> built from punch_records
+            return gson.toJson(db.readPunchHistory(emp));
+        });
+
         // 3. Insert a new employee for a specify company
         post("/employee", (req, res) -> {
-        	// Deserialize JSON request body to an Employee object
-        	Employee newEmp = gson.fromJson(req.body(), Employee.class);
-        	
-        	// Extract companyId from query parameter
-        	String companyIdStr = req.queryParams("companyId");
-        	
-        	// If companyId is not provided, return 400 (bad request)
-        	if (companyIdStr == null) {
-        		res.status(400);
-        		return gson.toJson("Missing companyID param");
-        	}
-        	
-        	// Attempt to convert companyId from str to int
-        	int companyId;
-        	try {
-        		companyId = Integer.parseInt(companyIdStr);
-        	}
-        	catch (NumberFormatException e) {
+            res.type("application/json");
+
+            // 1️⃣ Get & validate companyId query param
+            String companyIdStr = req.queryParams("companyId");
+            if (companyIdStr == null) {
                 res.status(400);
-                return gson.toJson("Invalid companyId format");
+                return gson.toJson("Missing companyId param");
             }
-        	
-        	// Create a placeholder Company object
+            int companyId = Integer.parseInt(companyIdStr);
+
+            // 2️⃣ Deserialize the exact JSON structure
+            EmployeePayload payload = gson.fromJson(req.body(), EmployeePayload.class);
+
+            // 3️⃣ Build your Employee object using a constructor you add to Employee.java
+            Employee newEmp = new Employee(
+                payload.person,
+                payload.jobDetails,
+                payload.contactInfo
+            );
+
+            // 4️⃣ Perform the insert
             Company company = new Company("placeholder", "none@none.com", "");
             company.setCompanyID(companyId);
-            
-            // Insert the employee using the backend method
             boolean success = db.insertEmployee(company, newEmp);
-            
+
+            // 5️⃣ Return appropriate status + message
             if (success) {
                 res.status(201);
                 return gson.toJson("Employee inserted successfully");
@@ -197,7 +286,7 @@ public class APIServer {
                 Employee fullEmp = db.readEmployeeFromID(dummy); // fetch all fields
                 if (fullEmp == null) return error(res, 404, "Employee not found");
 
-                return gson.toJson(db.readAllPunchingRecordsFromAEmployee(fullEmp));
+                return gson.toJson(db.readPunchHistory(fullEmp));
             } catch (Exception ex) {
                 ex.printStackTrace();
                 return error(res, 500, "Server error: " + ex.getMessage());
@@ -255,33 +344,6 @@ public class APIServer {
             }
         });
         
-        // 9. Register a new Company
-        post("/register", (req, res) -> {
-        	Company newCompany = gson.fromJson(req.body(), Company.class);
-        	
-        	if (newCompany == null || newCompany.getName() == null || newCompany.getEmail() == null || newCompany.getPassword() == null) {
-        		return error(res, 400, "Missing company registration info");
-        	}
-        	
-        	Company registerAttempt = db.registerCompany(newCompany);
-        	boolean registered;
-        	if (registerAttempt != null) {
-        		registered = true;
-        	}
-        	else {
-        		registered = false;
-        	}
-      
-        	if (registered) {
-        		res.status(201);
-        		return gson.toJson("Company registered successfully");
-        	}
-        	else {
-        	    res.status(500);
-        	    return gson.toJson("Failed to register company");
-        	}
-			
-        });
         
      // 10. Search for a specific employee in a company
         post("/employee/search", (req, res) -> {
@@ -296,7 +358,11 @@ public class APIServer {
             return gson.toJson(result != null ? result : error(res, 404, "Employee not found in company"));
         });
        
-        
+        // Test Route: confirm server is working
+        get("/hello", (req, res) -> {
+            return gson.toJson("Spark is working!");
+        });
+
         notFound((req, res) -> {
             res.type("application/json");
             return "{\"error\":\"Route not found\"}";
@@ -305,6 +371,18 @@ public class APIServer {
         
     }
     
+    // 1️⃣ Helper class to wrap login data from JSON: 
+    static class LoginWrapper {
+        String email; // Company email
+        String password; // Company password
+    }
+    
+    // 2️⃣ 
+    static class RegisterWrapper {
+        public String companyName;
+        public String email;
+        public String password;
+    }
     static class LocalDateTimeAdapter extends TypeAdapter<LocalDateTime> {
         private static final DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
@@ -384,10 +462,12 @@ public class APIServer {
         LocalDateTime punchOut; // Punch-out time
     }
     
-    // Helper class to wrap login data from JSON
-    static class LoginWrapper {
-        String email; // Company email
-        String password; // Company password
+    
+
+    public class EmployeePayload {
+        public Person person;
+        public JobDetails jobDetails;
+        public ContactInformation contactInfo;
     }
     
 }

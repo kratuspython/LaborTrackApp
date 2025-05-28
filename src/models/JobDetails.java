@@ -1,3 +1,4 @@
+package models;
 import java.time.Duration;
 
 public class JobDetails {

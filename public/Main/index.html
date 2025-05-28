@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LaborTrack</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/Main/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
 
 </head>
@@ -16,8 +16,8 @@
                 <h1>LaborTrack</h1>
             </div>
             <ul class="nav-links">
-                <li><a href="#home">Home</a></li>
-                <li><a href="">Logout</a></li>
+                <li><a href="/main/index.html">Home</a></li>
+                <li><a href="/delete-employee/index.html" id="logoutBtn">Logout</a></li>
             </ul>
         </nav>
     </div>
@@ -29,131 +29,225 @@
             <a href="../Delete-Employee/index.html"><button class="delete-button">- Delete Employee</button></a>
         </div>
         <!-- MIDDLE PANEL -->
-        <div id="employeeCards" class="middle-panel-container">
-            <!-- <div data-employee-id="101" class="employee-card">
-                <img src="../Images/Screenshot 2024-02-27 225308.png" alt="Employee Photo" class="employee-photo">
-                <div class="employee-info">
-                    <h3>John Markien</h3>
-                    <p>Software Engineer</p>
-                    <button class="punch-button">Punch In</button>
-                </div> -->
-
-                <!-- Dynamic employee cards will be inserted here -->
-            <!-- </div> -->
-            
+        <div class="middle-panel-container">
+            <!-- Dynamic employee cards will be inserted here --> 
+            <div id="employeeList" class="employee-grid">Loading employees…</div>          
         </div>
         <!-- RIGHT PANEL -->
         <div class="right-panel-container">
-            <h2 id="punchInTime">Punch-In: --:--</h2>
-            <h2 id="punchDuration">Duration: --:--</h2>
-            <p id="activeEmployee">Active Employee</p>
+          <aside class="status-panel">
+            <h2>Employee Status</h2>
+                <div id="statusName">—</div>
+                <div id="statusID">—</div>
+                <div id="statusTime">—</div>
+                <div id="statusDuration">—</div>
+          </aside>
         </div>
      </div>
 
-     <script>
-        let activeTimer = null;
-        let punchStartTime = null;
-        const punchInEl = document.getElementById("punchInTime");
-        const durationEl = document.getElementById("punchDuration");
-        const activeEmpEl = document.getElementById("activeEmployee");
+    <script>
+      // 1️⃣ At top of your <script>, before any functions run:
+      let selectedCard = null, timerId;
 
-        function formatTime(date) {
-        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        }
+     
+      // 2️⃣ Update initCardState to always set a default, then try to load:
+      async function initCardState(card) {
+        // default
+        card.punchedIn = false;
+        const btn = card.querySelector(".punch-btn");
 
-        async function loadEmployees() {
-        const companyId = localStorage.getItem("companyId");
-        if (!companyId) {
-            alert("You must be loggedIn.");
+        try {
+          const r = await fetch(`/api/punches?empId=${card.empData.employeeID}`, {
+            credentials: "include"
+          });
+          if (!r.ok) {
+            console.warn("No punch history for emp", card.empData.employeeID);
             return;
+          }
+          const history = await r.json();
+          // find the most recent open record
+          const open = history.find(h => h.punchOut == null);
+          if (open) {
+            // persist the punched-in look
+            card.punchedIn = true;
+            card.inTime    = new Date(open.punchIn);
+            card.classList.add("punched-in");
+            btn.textContent = "Punch Out";
+            btn.classList.add("out");
+          }
+        } catch (e) {
+          console.error("initCardState error", e);
         }
+      }
+      
+      // 3️⃣ In loadEmployees, await that init *before* wiring handlers:
+      async function loadEmployees() {
+        clearGlobalTimer();
+        clearStatus();
+        selectedCard = null;
 
-        const response = await fetch(`http://localhost:8080/employees?companyId=${companyId}`);
-        const employees = await response.json();
-        const container = document.getElementById("employeeCards");
+        const container = document.getElementById("employeeList");
         container.innerHTML = "";
+        const res = await fetch("/api/employees", { credentials: "include" });
+        if (res.status === 401) return window.location.href = "/login/index.html";
+        if (!res.ok) return container.innerText = `Error ${res.status}`;
 
-        employees.forEach(emp => {
-            const card = document.createElement("div");
-            card.className = "employee-card";
-            card.setAttribute("data-employee-id", emp.employeeID);
-
-            card.innerHTML = `
-            <img src="../Images/default-user.png" class="employee-photo">
-            <div class="employee-info">
-                <h3>${emp.person.name}</h3>
-                <p>${emp.jobDetails.position}</p>
-                <button class="punch-button">Punch In</button>
-            </div>
-            `;
-
-            // Single Click → update punch status on right panel
-            card.addEventListener("click", e => {
-            if (!e.target.classList.contains("punch-button")) {
-                punchInEl.innerText = "Punch-In: --:--";
-                durationEl.innerText = "Duration: --:--";
-                activeEmpEl.innerText = `Employee #${emp.employeeID} - ${emp.person.name}`;
-
-            }
-            });
-
-            // Double Click → go to employee info page
-            card.addEventListener("dblclick", () => {
-            localStorage.setItem("selectedEmployee", JSON.stringify(emp));
-            window.location.href = "../EmployeeInfo/index.html";
-            });
-
-            // Punch Button logic
-            const punchBtn = card.querySelector(".punch-button");
-            punchBtn.addEventListener("click", async event => {
-            event.stopPropagation();
-            const now = new Date();
-            const punchData = {
-                employeeId: emp.employeeID,
-                punchIn: now.toISOString(),
-                punchOut: now.toISOString()
-            };
-
-            const res = await fetch("http://localhost:8080/punch", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(punchData)
-            });
-
-            if (!res.ok) {
-                const err = await res.text();
-                alert("Failed to punch: " + err);
-                return;
-            }
-
-            if (punchBtn.innerText === "Punch In") {
-                punchBtn.innerText = "Punch Out";
-                punchStartTime = now;
-                punchInEl.innerText = `Punch-In: ${formatTime(now)}`;
-                document.querySelector(".right-panel-container p").innerText = `Employee #${emp.employeeID} - ${emp.person.name}`;
-                if (activeTimer) clearInterval(activeTimer);
-                activeTimer = setInterval(() => {
-                const diff = new Date() - punchStartTime;
-                const min = Math.floor(diff / 60000);
-                const sec = Math.floor((diff % 60000) / 1000);
-                durationEl.innerText = `Duration: ${min}M:${sec < 10 ? '0' : ''}${sec}S`;
-                }, 1000);
-            } else {
-                punchBtn.innerText = "Punch In";
-                clearInterval(activeTimer);
-                activeTimer = null;
-                punchStartTime = null;
-                punchInEl.innerText = "Punch-In: --:--";
-                durationEl.innerText = "Duration: --:--";
-                activeEmpEl.innerText = "Active Employee";
-            }
-            });
-
-            container.appendChild(card);
-        });
+        const employees = await res.json();
+        if (employees.length === 0) {
+          container.innerText = "Currently no employees.";
+          return;
         }
 
-        window.onload = loadEmployees;
+        // build each card and init state
+        for (const emp of employees) {
+          const card = document.createElement("div");
+          card.className = "employee-card";
+          card.dataset.empid = emp.employeeID;
+          card.empData = emp;
+          card.innerHTML = `
+            <img class="profile-pic" src="/Images/${emp.profilePic}" alt="${emp.name}">
+            <h3>${emp.name}</h3>
+            <p><strong>Position:</strong> ${emp.jobDetails.position}</p>
+            <p><strong>ID:</strong> ${emp.employeeID}</p>
+            <button class="punch-btn">Punch In</button>
+          `;
+          container.appendChild(card);
+
+          // 4️⃣ hydrate the state, *then* bind your click:
+          await initCardState(card);      // restore in-progress flag/inTime
+          attachHandlers(card);           // wire up click & punch logic
+        }
+
+        // auto-select the first in-progress punch so its timer resumes
+        const inProg = container.querySelector(".employee-card.punched-in");
+        if (inProg) inProg.click();
+      }
+
+       // ——— Utility to clear the existing timer —————————————————————————————
+      function clearGlobalTimer() {
+        if (timerId) {
+          clearInterval(timerId);
+          timerId = null;
+        }
+      }
+
+      // ——— Right-panel helpers ————————————————————————————————————————
+      function showStatus(emp, inTime) {
+        document.getElementById("statusName").textContent = `Name: ${emp.name}`;
+        document.getElementById("statusID").textContent   = `ID: ${emp.employeeID}`;
+        if (inTime) {
+          document.getElementById("statusTime").textContent = `In at: ${inTime.toLocaleTimeString()}`;
+          updateDuration(new Date() - inTime);
+        } else {
+          document.getElementById("statusTime").textContent     = `Not punched in.`;
+          document.getElementById("statusDuration").textContent = "";
+        }
+      }
+      function updateDuration(ms) {
+        const s = Math.floor(ms/1000)%60;
+        const m = Math.floor(ms/60000)%60;
+        const h = Math.floor(ms/3600000);
+        document.getElementById("statusDuration").textContent =
+          `Duration: ${h}h ${m}m ${s}s`;
+      }
+      function clearStatus() {
+        ["statusName","statusID","statusTime","statusDuration"]
+          .forEach(id => document.getElementById(id).textContent = "—");
+      }
+
+      
+
+      // ——— Wire up single/double-click + punch button ——————————————————————
+      function attachHandlers(card) {
+        const btn = card.querySelector(".punch-btn");
+
+        // single-click: select this card & start/stop timer accordingly
+        card.addEventListener("click", () => {
+          if (selectedCard !== card) {
+            clearGlobalTimer();
+
+            selectedCard = card;
+            if (card.punchedIn) {
+              showStatus(card.empData, card.inTime);
+              timerId = setInterval(() =>
+                updateDuration(new Date() - card.inTime), 1000);
+            } else {
+              showStatus(card.empData, null);
+            }
+          }
+        });
+
+        // double-click: navigate to detail
+        card.addEventListener("dblclick", () => {
+          window.location.href = `/EmployeeInfo/index.html?empId=${card.empData.employeeID}`;
+        });
+
+        // punch button: clear old timer, then in or out
+        btn.addEventListener("click", async e => {
+          e.stopPropagation();
+          clearGlobalTimer();
+
+          if (!card.punchedIn) {
+            // PUNCH IN
+            const r = await fetch(`/api/punchin?empId=${card.empData.employeeID}`, {
+              method: "POST", credentials: "include"
+            });
+            if (!r.ok) return alert("Punch-in failed");
+            card.punchedIn = true;
+            card.inTime    = new Date();
+            card.classList.add("punched-in");
+            btn.textContent = "Punch Out";
+            btn.classList.add("out");
+
+            // select & start timer
+            selectedCard = card;
+            showStatus(card.empData, card.inTime);
+            timerId = setInterval(() =>
+              updateDuration(new Date() - card.inTime), 1000);
+
+          } else {
+            // PUNCH OUT
+            const r = await fetch(`/api/punchout?empId=${card.empData.employeeID}`, {
+              method: "POST", credentials: "include"
+            });
+            const text = await r.text();
+            if (!r.ok) return alert(`Punch-out failed: ${text}`);
+            card.punchedIn = false;
+            card.classList.remove("punched-in");
+            btn.textContent = "Punch In";
+            btn.classList.remove("out");
+            clearStatus();
+          }
+        });
+      }
+
+      // ——— Initialize page on load, navigation, or back/forward —————————————————
+      function initPage() {
+        // wire up logout (only once)
+        document.getElementById("logoutBtn").addEventListener("click", async e => {
+          e.preventDefault();
+          await fetch("/api/logout", { method: "POST", credentials: "include" });
+          window.location.href = "/login/index.html";
+        });
+    
+        // reset state & fetch
+        clearGlobalTimer();
+        clearStatus();
+        selectedCard = null;
+        loadEmployees();
+      }
+    
+      // First load
+  window.addEventListener("DOMContentLoaded", initPage);
+
+  // Back/forward cache restores only
+  window.addEventListener("pageshow", event => {
+    if (event.persisted) {
+      initPage();
+    }
+  });
+
+      
     </script>
 
 </body>

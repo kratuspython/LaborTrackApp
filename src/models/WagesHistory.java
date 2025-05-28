@@ -1,3 +1,4 @@
+package models;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.IsoFields;

@@ -119,3 +119,14 @@ a {
     margin: 18px 0px 0px 0px;
     font-size:16px;
 }
+
+/* ensure the container remains vertical on mobile */
+@media (max-width: 768px) {
+  .login-container { flex-direction: column; padding: 20px; }
+}
+
+.login-box {
+  max-width: 400px;    /* constrain width */
+  width: 100%;
+  margin: auto;        /* center on narrow screens */
+}
