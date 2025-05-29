@@ -14,8 +14,8 @@
             <h1>LaborTrack</h1>
         </div>
         <ul class="nav-links">
-            <li><a href="../Main/index.html">Home</a></li>
-            <li><a href="">Logout</a></li>
+            <li><a href="/Main/index.html">Home</a></li>
+            <li><a href="#" id="logoutLink">Logout</a></li>
         </ul>
     </nav>
 </div>
@@ -29,7 +29,7 @@
     <div class="middle-panel-container">
         <div class="add-employee-form">
             <h2>Add Employee</h2>
-            <form>
+            <form id="employeeForm" enctype="multipart/form-data">
                 <!-- Profile Image -->
                 <div class="image-upload">
                     <label for="profilePic">
@@ -42,12 +42,12 @@
                 <!-- Name -->
                 <div class="input-group">
                     <label for="name">Name</label>
-                    <input id="name" type="text" id="name" placeholder="Name" required>
+                    <input id="name" type="text" placeholder="Name" required>
                 </div>
                 <!-- Datebirth -->
                 <div class="input-group">
                     <label>Date of Birth</label>
-                    <input id="dateBirth" type="date" maxlength="4" placeholder="YYYY" required>
+                    <input id="dateBirth" type="date" required>
                 </div>
                 <!-- Job Details -->
                 <div class="input-group">
@@ -78,59 +78,80 @@
 
  <!----------------------- JAVASCRIPT --------------------->
  <script>
-  // 1️⃣ Read the companyId from the page’s URL (or default to 1)
-  const params    = new URLSearchParams(window.location.search);
-  const companyId = params.get('companyId') || 1;
+    (function(){
+      const form = document.getElementById('employeeForm');
 
-  // 2️⃣ Hook your form submit
-  const form = document.getElementById('employeeForm');
-  form.addEventListener('submit', async function(e) {
-    e.preventDefault();
-
-    // 3️⃣ Build the employee payload exactly as your backend expects
-    const employee = {
-      person: {
-        name:        document.getElementById('name').value,
-        day:         parseInt(document.getElementById('day').value, 10),
-        month:       parseInt(document.getElementById('month').value, 10),
-        year:        parseInt(document.getElementById('year').value, 10),
-        profileImage: document.getElementById('profileImage').value
-      },
-      jobDetails: {
-        position:    document.getElementById('position').value,
-        department:  document.getElementById('department').value,
-        hourlyWage:  parseFloat(document.getElementById('wage').value)
-      },
-      contactInfo: {
-        email:       document.getElementById('email').value,
-        phoneNumber: document.getElementById('phone').value,
-        address:     document.getElementById('address').value
-      }
-    };
-
-    // 4️⃣ Send to the correct endpoint with your companyId
-    const url = `http://localhost:8088/employee?companyId=${companyId}`;
-    console.log('Posting to:', url, employee);  // <-- DEV: check your console
-
-    try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(employee)
+      // preview logic stays the same…
+      const picInput = document.getElementById('profilePic');
+      const preview  = document.getElementById('preview-image');
+      picInput.addEventListener('change', () => {
+        if (picInput.files && picInput.files[0]) {
+          preview.src = URL.createObjectURL(picInput.files[0]);
+        } else {
+          preview.src = 'Images/default-user.png';
+        }
       });
-      const text = await res.text();
-      if (res.ok) {
-        alert('Employee added successfully!');
-        window.location.href = `../Main/index.html?companyId=${companyId}`; // redirect back
-      } else {
-        alert('Failed to add employee: ' + text);
+
+      form.addEventListener('submit', onSubmit);
+
+      async function onSubmit(e) {
+        e.preventDefault();
+
+        // 1️⃣ collect all the fields
+        const name        = document.getElementById('name').value;
+        const [year, month, day] = document
+          .getElementById('dateBirth')
+          .value.split('-').map(Number);
+
+        const position    = document.getElementById('position').value;
+        const department  = document.getElementById('department').value;
+        const hourlyWage  = parseFloat(document.getElementById('hourlyWage').value);
+
+        const email       = document.getElementById('email').value;
+        const phoneNumber = document.getElementById('phoneNumber').value;
+        const address     = document.getElementById('address').value;
+
+        // 2️⃣ profilePic filename only (we’re not uploading the binary here)
+        const profilePic = picInput.files && picInput.files[0]
+          ? picInput.files[0].name
+          : 'default.jpg';
+
+        // 3️⃣ build the flat payload matching Employee.class
+        const employee = {
+          name,
+          day,
+          month,
+          year,
+          profilePic,
+          jobDetails:   { position, department, hourlyWage },
+          contactInfo: { email, phoneNumber, address }
+        };
+
+        // 4️⃣ POST to the session-backed endpoint
+        try {
+          const res = await fetch('/api/employees', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(employee)
+          });
+
+          // parse any JSON error
+          if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.error || res.statusText);
+          }
+
+          // 5️⃣ success → go home
+          alert('Employee added successfully!');
+          window.location.href = '/Main/index.html';
+        } catch (err) {
+          console.error(err);
+          alert('Failed to add employee: ' + err.message);
+        }
       }
-    } catch (err) {
-      console.error('Network error:', err);
-      alert('Network error: ' + err.message);
-    }
-  });
-</script>
+    })();
+  </script>
 </body>
 
 </html>

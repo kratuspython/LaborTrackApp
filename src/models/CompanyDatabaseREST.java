@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class CompanyDatabaseREST {
-    private Connection connect = LaborTrackDBConnector.connect();
     private PreparedStatement pstmt; 
 
     // LOGIN to Company from DB(companies)
@@ -20,6 +19,7 @@ public class CompanyDatabaseREST {
         String command = "SELECT * FROM companies WHERE email=? AND password=?";
 
         try {
+            Connection connect = LaborTrackDBConnector.connect();
             pstmt = connect.prepareStatement(command);
 
             pstmt.setString(1, email);
@@ -48,6 +48,7 @@ public class CompanyDatabaseREST {
     public Company registerCompany(Company c) {
     	String command = "INSERT INTO companies (company_name, email, password) VALUES (?, ?, ?)";
         try {
+            Connection connect = LaborTrackDBConnector.connect();
             pstmt = connect.prepareStatement(command, Statement.RETURN_GENERATED_KEYS);           
             pstmt.setString(1, c.getName());
             pstmt.setString(2, c.getEmail());
@@ -81,6 +82,7 @@ public class CompanyDatabaseREST {
 
         String command = "SELECT * FROM employees WHERE company_id=?";
         try {
+            Connection connect = LaborTrackDBConnector.connect();
             pstmt = connect.prepareStatement(command);
             pstmt.setInt(1, c.getCompanyID());
             
@@ -125,6 +127,7 @@ public class CompanyDatabaseREST {
     	String command = "SELECT * FROM employees WHERE employee_id = ? AND company_id = ?";
         
         try {
+            Connection connect = LaborTrackDBConnector.connect();
             pstmt = connect.prepareStatement(command);
             pstmt.setInt(1, e.getEmployeeID());
             pstmt.setInt(2, c.getCompanyID());
@@ -167,11 +170,13 @@ public class CompanyDatabaseREST {
     // Insert Employee to DB(employees)
     public boolean insertEmployee(Company c, Employee e) {
     	try {
-            // Check if email already exists
-            String checkSql = "SELECT COUNT(*) FROM employees WHERE email = ?";
-            PreparedStatement checkStmt = connect.prepareStatement(checkSql);
-            checkStmt.setString(1, e.getContactInfo().getEmail());
-            ResultSet rs = checkStmt.executeQuery();
+            // Check if email already exists in the same company
+            String checkSql = "SELECT COUNT(*) FROM employees WHERE email = ? AND company_id = ?";
+            Connection connect = LaborTrackDBConnector.connect();
+            pstmt = connect.prepareStatement(checkSql);
+            pstmt.setString(1, e.getContactInfo().getEmail());
+            pstmt.setInt(2, c.getCompanyID());
+            ResultSet rs = pstmt.executeQuery();
             if (rs.next() && rs.getInt(1) > 0) {
                 System.out.println("❌ Employee with this email already exists.");
                 return false;
@@ -217,6 +222,7 @@ public class CompanyDatabaseREST {
         String command2 = "DELETE FROM employees WHERE employee_id=?";
         try {
         	// Delete punching history
+            Connection connect = LaborTrackDBConnector.connect();
             pstmt = connect.prepareStatement(command);
             pstmt.setInt(1, e.getEmployeeID());
             punchHistoryDelete = pstmt.executeUpdate() > 0;
@@ -245,59 +251,36 @@ public class CompanyDatabaseREST {
     }
     
     // Insert a punch in record
-    public boolean punchIn(Employee e, LocalDateTime punchIn) {
-        String command = "INSERT INTO punch_records (employee_id, punch_in, punch_out, duration_minutes) VALUES (?, ?, NULL, NULL)";
-        try {
-            pstmt = connect.prepareStatement(command);
+    public static boolean insertPunchIn(int empId) {
+        String sql = 
+            "INSERT INTO punch_records(employee_id, punch_in) " +
+            "VALUES(?, datetime('now'));";
 
-            pstmt.setInt(1, e.getEmployeeID());
-            pstmt.setString(2, punchIn.toString());
-            return pstmt.executeUpdate() == 1;
-        } catch (SQLException ex) {
-            System.out.println("❌ Error punching in: " + ex.getMessage());
+        try (Connection c = LaborTrackDBConnector.connect();
+             PreparedStatement p = c.prepareStatement(sql)) {
+            p.setInt(1, empId);
+            return p.executeUpdate() == 1;
+        } catch (SQLException e) {
+            System.err.println("❌ punchIn error: " + e.getMessage());
             return false;
         }
     }
 
     // Insert a punch out record: Record the end of a shift by updating the most recent NULL punch_out for this employee. Also, fills in duration_minutes.
-    public boolean punchOut(Employee e, LocalDateTime outTime) {
-        // 1️⃣ Find the most recent open punch record
-        String command = "" +
-        "SELECT punch_id, punch_in " +
-        "FROM punch_records " +
-        "WHERE employee_id = ? AND punch_out IS NULL " +
-        "ORDER BY punch_in DESC " +
-        "LIMIT 1";
-        try {
-            pstmt = connect.prepareStatement(command);
-            pstmt.setInt(1, e.getEmployeeID());
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (!rs.next()) {
-                    System.out.println("❌ No open punch-in found for emp " + e.getEmployeeID());
-                    return false;
-                }
-                int recId = rs.getInt("punch_id");
-                LocalDateTime inTime = LocalDateTime.parse(rs.getString("punch_in"));
+     public static boolean insertPunchOut(int empId) {
+        String sql = 
+            "UPDATE punch_records " +
+            "   SET punch_out = datetime('now'), " +
+            "       duration_minutes = " +
+            "         CAST((julianday('now') - julianday(punch_in))*24*60 AS INTEGER) " +
+            " WHERE employee_id=? AND punch_out IS NULL;";
 
-                // 2️⃣ Compute duration
-                long minutes = Duration.between(inTime, outTime).toMinutes();
-
-                // 3️⃣ Update that single record
-                String command2 = 
-                "UPDATE punch_records " +
-                "   SET punch_out = ?, duration_minutes = ? " +
-                " WHERE punch_id = ?";
-                try (PreparedStatement pu = connect.prepareStatement(command2)) {
-                    pu.setString(1, outTime.toString());
-                    pu.setLong(2, minutes);
-                    pu.setInt(3, recId);
-                    int rows = pu.executeUpdate();
-                    return rows == 1;
-                }
-            }
-        } catch (Exception ex) {
-            // print full stack for easier debugging
-            ex.printStackTrace();
+        try (Connection c = LaborTrackDBConnector.connect();
+             PreparedStatement p = c.prepareStatement(sql)) {
+            p.setInt(1, empId);
+            return p.executeUpdate() == 1;
+        } catch (SQLException e) {
+            System.err.println("❌ punchOut error: " + e.getMessage());
             return false;
         }
     }
@@ -306,6 +289,7 @@ public class CompanyDatabaseREST {
     public boolean insertPunchRecord(Employee e, LocalDateTime punchIn, LocalDateTime punchOut) {
         String command = "INSERT INTO punch_records (employee_id, punch_in, punch_out, duration_minutes) VALUES (?, ?, ?, ?)";
         try {
+            Connection connect = LaborTrackDBConnector.connect();
             pstmt = connect.prepareStatement(command);
             
             long minutes = java.time.Duration.between(punchIn, punchOut).toMinutes();
@@ -327,8 +311,10 @@ public class CompanyDatabaseREST {
     public List<String> readPunchHistory(Employee e) {
         List<String> records = new ArrayList<>();
         String query = "SELECT * FROM punch_records WHERE employee_id = ?";
-
-        try (PreparedStatement pstmt = connect.prepareStatement(query)) {
+        
+        try {
+            Connection connect = LaborTrackDBConnector.connect();
+            pstmt = connect.prepareStatement(query);
             pstmt.setInt(1, e.getEmployeeID());
 
             try (ResultSet rs = pstmt.executeQuery()) {
@@ -354,6 +340,26 @@ public class CompanyDatabaseREST {
         return records;
     }
 
+    // Read open but not close punches:
+    public List<String> readOpenPunchTimes(int empId) {
+        List<String> punchIns = new ArrayList<>();
+        String sql = "SELECT punch_in FROM punch_records WHERE employee_id = ? AND punch_out IS NULL";
+        try (Connection conn = LaborTrackDBConnector.connect();
+            PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, empId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    // returns the raw ISO string, e.g. "2025-05-28T18:47:11"
+                    punchIns.add(rs.getString("punch_in"));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return punchIns;
+    }
+    
+
     private String formatDate(LocalDateTime dt) {
         return dt.format(DateTimeFormatter.ofPattern("MM/dd/yy 'at' hh:mm a"));
     }
@@ -363,6 +369,7 @@ public class CompanyDatabaseREST {
 		String command = "SELECT * FROM punch_records WHERE employee_id = ? ORDER BY punch_in DESC LIMIT 1";
 		
 		try {
+            Connection connect = LaborTrackDBConnector.connect();
 			pstmt = connect.prepareStatement(command);
 			pstmt.setInt(1, emp.getEmployeeID());
 			ResultSet result_set = pstmt.executeQuery();
@@ -394,7 +401,9 @@ public class CompanyDatabaseREST {
     
     public Employee readEmployeeFromID(Employee e) {
     	String query = "SELECT * FROM employees WHERE employee_id = ?";
-        try (PreparedStatement pstmt = connect.prepareStatement(query)) {
+        try {
+            Connection connect = LaborTrackDBConnector.connect();
+            pstmt = connect.prepareStatement(query);
             pstmt.setInt(1, e.getEmployeeID());
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {

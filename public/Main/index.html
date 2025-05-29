@@ -52,31 +52,28 @@
      
       // 2️⃣ Update initCardState to always set a default, then try to load:
       async function initCardState(card) {
-        // default
         card.punchedIn = false;
         const btn = card.querySelector(".punch-btn");
 
-        try {
-          const r = await fetch(`/api/punches?empId=${card.empData.employeeID}`, {
-            credentials: "include"
-          });
-          if (!r.ok) {
-            console.warn("No punch history for emp", card.empData.employeeID);
-            return;
-          }
-          const history = await r.json();
-          // find the most recent open record
-          const open = history.find(h => h.punchOut == null);
-          if (open) {
-            // persist the punched-in look
-            card.punchedIn = true;
-            card.inTime    = new Date(open.punchIn);
-            card.classList.add("punched-in");
-            btn.textContent = "Punch Out";
-            btn.classList.add("out");
-          }
-        } catch (e) {
-          console.error("initCardState error", e);
+        const res = await fetch(`/api/punches?empId=${card.empData.employeeID}`, {
+          credentials: "include"
+        });
+        if (!res.ok) return;
+
+        const openIns = await res.json();
+        console.log("openIns from server:", openIns);
+
+        if (openIns.length > 0) {
+          card.punchedIn = true;
+          
+          // server gives us "2025-05-28 23:49:37"
+          const ts     = openIns[0];
+          const utcTs  = ts.replace(" ", "T") + "Z";      // "2025-05-28T23:49:37Z"
+          card.inTime  = new Date(utcTs);                // parsed as UTC
+
+          card.classList.add("punched-in");
+          btn.textContent = "Punch Out";
+          btn.classList.add("out");
         }
       }
       
@@ -194,7 +191,29 @@
             });
             if (!r.ok) return alert("Punch-in failed");
             card.punchedIn = true;
-            card.inTime    = new Date();
+            const r2 = await fetch(`/api/punches?empId=${card.empData.employeeID}`, {
+              credentials: "include"
+            });
+            const openIns2 = await r2.json();
+            if (openIns2.length > 0) {
+              // parse exactly as above
+              const [date, time]     = openIns2[0].split(" ");
+              const [Y, Mo, D]       = date.split("-").map(Number);
+              const [h, m, s]        = time.split(":").map(Number);
+              if (openIns2.length > 0) {
+                // Option 1 — append "Z":
+                const utcTs = openIns2[0].replace(" ", "T") + "Z";
+                card.inTime = new Date(utcTs);
+
+                // —OR— Option 2 with Date.UTC (uncomment to use):
+                /*
+                const [d,t]     = openIns2[0].split(" ");
+                const [Y,Mo,D]   = d.split("-").map(Number);
+                const [h,m,s]    = t.split(":").map(Number);
+                card.inTime      = new Date(Date.UTC(Y, Mo - 1, D, h, m, s));
+                */
+              }
+            }
             card.classList.add("punched-in");
             btn.textContent = "Punch Out";
             btn.classList.add("out");
@@ -238,14 +257,14 @@
       }
     
       // First load
-  window.addEventListener("DOMContentLoaded", initPage);
+      window.addEventListener("DOMContentLoaded", initPage);
 
-  // Back/forward cache restores only
-  window.addEventListener("pageshow", event => {
-    if (event.persisted) {
-      initPage();
-    }
-  });
+      // Back/forward cache restores only
+      window.addEventListener("pageshow", event => {
+        if (event.persisted) {
+          initPage();
+        }
+      });
 
       
     </script>

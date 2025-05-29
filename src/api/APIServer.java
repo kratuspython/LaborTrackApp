@@ -10,10 +10,12 @@ import models.CompanyDatabaseREST;
 
 import static spark.Spark.*;
 import spark.Route; 
+import spark.Spark; // <-- Add this import for staticFiles
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -24,6 +26,8 @@ import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
+
+import api.APIServer.ResponseError;
 public class APIServer {
 	
 	
@@ -35,7 +39,7 @@ public class APIServer {
         port(8088);
         
         String staticDir = Paths.get("public").toAbsolutePath().toString();
-        System.out.println("Static files being served from: " + staticDir);
+        System.out.println("Static files served from: " + staticDir);
         staticFiles.externalLocation(staticDir);
 
         
@@ -140,53 +144,25 @@ public class APIServer {
         // 5️⃣ Add Punch In Time to an employee
         post("/api/punchin", (Route) (req, res) -> {
             res.type("application/json");
-            // 1️⃣ read empId from query
-            String empIdStr = req.queryParams("empId");
-            if (empIdStr == null) {
-                res.status(400);
-                return gson.toJson("Missing empId");
-            }
-            int empId = Integer.parseInt(empIdStr);
-
-            // 2️⃣ build minimal Employee wrapper
-            Employee emp = new Employee();
-            emp.setEmployeeID(empId);
-
-            // 3️⃣ call your DAO
-            boolean ok = db.punchIn(emp, LocalDateTime.now());
-
-            // 4️⃣ respond appropriately
-            if (ok) {
-                res.status(201);
-                return gson.toJson("Punch-in recorded");
-            } else {
+            int empId = Integer.parseInt(req.queryParams("empId"));
+            boolean ok = CompanyDatabaseREST.insertPunchIn(empId);
+            if (!ok) {
                 res.status(500);
-                return gson.toJson("Failed to record punch-in");
+                return gson.toJson(Map.of("error", "Failed to record punch-in"));
             }
+            return gson.toJson(Map.of("success", true));
         });
 
         // 6️⃣ Add Punch Out time and closing a punching record (punchIn, PunchOut, Duration) for an employee
         post("/api/punchout", (Route) (req, res) -> {
             res.type("application/json");
-            String empIdStr = req.queryParams("empId");
-            if (empIdStr == null) {
-                res.status(400);
-                return gson.toJson("Missing empId");
-            }
-            int empId = Integer.parseInt(empIdStr);
-
-            Employee emp = new Employee();
-            emp.setEmployeeID(empId);
-
-            boolean ok = db.punchOut(emp, LocalDateTime.now());
-
-            if (ok) {
-                res.status(200);
-                return gson.toJson("Punch-out recorded");
-            } else {
+            int empId = Integer.parseInt(req.queryParams("empId"));
+            boolean ok = CompanyDatabaseREST.insertPunchOut(empId);
+            if (!ok) {
                 res.status(500);
-                return gson.toJson("Failed to record punch-out");
+                return gson.toJson(Map.of("error", "Failed to record punch-out"));
             }
+            return gson.toJson(Map.of("success", true));
         });
 
         // 7️⃣ Get punch History from an employee
@@ -195,51 +171,48 @@ public class APIServer {
             String empIdStr = req.queryParams("empId");
             if (empIdStr == null) {
                 res.status(400);
-                return gson.toJson("Missing empId");
+                return gson.toJson(new ResponseError("Missing empId"));
             }
             int empId = Integer.parseInt(empIdStr);
 
             Employee emp = new Employee();
             emp.setEmployeeID(empId);
 
-            // returns List<Timing> built from punch_records
-            return gson.toJson(db.readPunchHistory(emp));
+            List<String> openIns = db.readOpenPunchTimes(emp.getEmployeeID());
+            return gson.toJson(openIns);
         });
 
         // 3. Insert a new employee for a specify company
-        post("/employee", (req, res) -> {
+        post("/api/employees", (Route) (req, res) -> {
             res.type("application/json");
+            try {
+                // 1️⃣ get companyId from session (set during /api/login)
+                Integer companyId = req.session().attribute("companyId");
+                if (companyId == null) {
+                    res.status(401);
+                    return gson.toJson(new ResponseError("Not logged in"));
+                }
 
-            // 1️⃣ Get & validate companyId query param
-            String companyIdStr = req.queryParams("companyId");
-            if (companyIdStr == null) {
-                res.status(400);
-                return gson.toJson("Missing companyId param");
-            }
-            int companyId = Integer.parseInt(companyIdStr);
+                // 2️⃣ parse Employee directly
+                Employee newEmp = gson.fromJson(req.body(), Employee.class);
 
-            // 2️⃣ Deserialize the exact JSON structure
-            EmployeePayload payload = gson.fromJson(req.body(), EmployeePayload.class);
+                // 3️⃣ insert into the correct company
+                Company company = new Company("", "", "");
+                company.setCompanyID(companyId);
+                boolean ok = db.insertEmployee(company, newEmp);
 
-            // 3️⃣ Build your Employee object using a constructor you add to Employee.java
-            Employee newEmp = new Employee(
-                payload.person,
-                payload.jobDetails,
-                payload.contactInfo
-            );
-
-            // 4️⃣ Perform the insert
-            Company company = new Company("placeholder", "none@none.com", "");
-            company.setCompanyID(companyId);
-            boolean success = db.insertEmployee(company, newEmp);
-
-            // 5️⃣ Return appropriate status + message
-            if (success) {
-                res.status(201);
-                return gson.toJson("Employee inserted successfully");
-            } else {
+                // 4️⃣ respond
+                if (ok) {
+                    res.status(201);
+                    return gson.toJson("Employee inserted successfully");
+                } else {
+                    res.status(500);
+                    return gson.toJson(new ResponseError("DAO.insertEmployee returned false"));
+                }
+            } catch (Exception ex) {
+                ex.printStackTrace();  // logs the stack for debugging
                 res.status(500);
-                return gson.toJson("Failed to insert employee");
+                return gson.toJson(new ResponseError(ex.getMessage()));
             }
         });
         
