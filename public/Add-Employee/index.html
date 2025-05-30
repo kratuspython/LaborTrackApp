@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
 </head>
+<body>
 <!------------------------- NAVEGATION BAR --------------------------->
 <div class="nav-bar-container">
     <nav class="nav-bar">
@@ -34,10 +35,10 @@
                 <div class="image-upload">
                     <label for="profilePic">
                       <div class="image-circle">
-                        <img id="preview-image" src="Images/default-user.png" alt="Profile Image">
+                        <img id="preview-image" src="/Images/default-user.png">
                       </div>
                     </label>
-                    <input id="profilePic" type="file" accept="image/*">
+                    <input id="profilePic" name="profilePic" type="file" accept="image/*" required>
                 </div>
                 <!-- Name -->
                 <div class="input-group">
@@ -77,80 +78,110 @@
  </div>
 
  <!----------------------- JAVASCRIPT --------------------->
- <script>
-    (function(){
-      const form = document.getElementById('employeeForm');
+  <script>
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      const form      = document.getElementById('employeeForm');
+      const picInput  = document.getElementById('profilePic');
+      const preview   = document.getElementById('preview-image');
+      const logoutLink= document.getElementById('logoutLink');
 
-      // preview logic stays the same…
-      const picInput = document.getElementById('profilePic');
-      const preview  = document.getElementById('preview-image');
+      // 1) Logout
+      logoutLink.addEventListener('click', async e => {
+        e.preventDefault();
+        await fetch('/api/logout', {
+          method: 'POST',
+          credentials: 'include'
+        });
+        window.location.href = '/login/index.html';
+      });
+
+      // 2) Preview
       picInput.addEventListener('change', () => {
-        if (picInput.files && picInput.files[0]) {
+        console.log('file picker change →', picInput.files);
+        if (picInput.files.length > 0) {
           preview.src = URL.createObjectURL(picInput.files[0]);
         } else {
-          preview.src = 'Images/default-user.png';
+          preview.src = '/Images/default-user.png';
         }
       });
 
-      form.addEventListener('submit', onSubmit);
-
-      async function onSubmit(e) {
+      // 3) Form submission: JSON + image upload + alert + reset
+      form.addEventListener('submit', async e => {
         e.preventDefault();
 
-        // 1️⃣ collect all the fields
-        const name        = document.getElementById('name').value;
-        const [year, month, day] = document
-          .getElementById('dateBirth')
-          .value.split('-').map(Number);
-
-        const position    = document.getElementById('position').value;
-        const department  = document.getElementById('department').value;
-        const hourlyWage  = parseFloat(document.getElementById('hourlyWage').value);
-
-        const email       = document.getElementById('email').value;
-        const phoneNumber = document.getElementById('phoneNumber').value;
-        const address     = document.getElementById('address').value;
-
-        // 2️⃣ profilePic filename only (we’re not uploading the binary here)
-        const profilePic = picInput.files && picInput.files[0]
-          ? picInput.files[0].name
-          : 'default.jpg';
-
-        // 3️⃣ build the flat payload matching Employee.class
-        const employee = {
-          name,
-          day,
-          month,
-          year,
-          profilePic,
-          jobDetails:   { position, department, hourlyWage },
-          contactInfo: { email, phoneNumber, address }
-        };
-
-        // 4️⃣ POST to the session-backed endpoint
+        
         try {
+          // Build employee payload
+          console.log("Build employee 1");
+          const employee = {
+            name:         document.getElementById('name').value.trim(),
+            // if you switched to a single <input type="date" id="dateBirth">:
+            day:          new Date(document.getElementById('dateBirth').value).getUTCDate(),
+            month:        new Date(document.getElementById('dateBirth').value).getUTCMonth() + 1,
+            year:         new Date(document.getElementById('dateBirth').value).getUTCFullYear(),
+            position:     document.getElementById('position').value.trim(),
+            department:   document.getElementById('department').value.trim(),
+            hourlyWage:   parseFloat(document.getElementById('hourlyWage').value),
+            email:        document.getElementById('email').value.trim().toLowerCase(),
+            phoneNumber:  document.getElementById('phoneNumber').value.trim(),
+            address:      document.getElementById('address').value.trim()
+          };
+          console.log("Build employee 2");
+
+          console.log('▶️ Employee payload:', employee);
+
+          console.log("Parse JSON 1");
+          // Send the JSON
           const res = await fetch('/api/employees', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
             body: JSON.stringify(employee)
           });
-
-          // parse any JSON error
+          console.log("Parse JSON 2");
+          // Parse the JSON response (must now include the new employeeId)
+          const result = await res.json();
           if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.error || res.statusText);
+            throw new Error(result.error || res.statusText);
           }
+          const empId = result.employeeId;
+          console.log("Parse JSON 3");
 
-          // 5️⃣ success → go home
+          console.log("✅ server returned:", result);
+
+          // Upload image if present
+          if (picInput.files.length > 0) { // here
+            const formData = new FormData();
+            console.log("upload image error.1")
+            formData.append('profilePic', picInput.files[0]);
+            const res2 = await fetch(`/api/employees/${empId}/image`, {
+              method: 'POST',
+              credentials: 'include',
+              body: formData
+            });
+            console.log("upload image error.2")
+            if (!res2.ok) {
+              console.log("upload image error.3")
+              const e2 = await res2.json().catch(()=>({error:res2.statusText}));
+              throw new Error(e2.error || 'Image upload failed');
+            }
+          }
+          console.log("upload image error.4")
+
+            // Success alert and reset form
           alert('Employee added successfully!');
-          window.location.href = '/Main/index.html';
-        } catch (err) {
-          console.error(err);
-          alert('Failed to add employee: ' + err.message);
+          form.reset();
+          // preview.src = '/Images/default-user.png'; // here
+          // window.location.href = '/Main/index.html';
         }
-      }
-    })();
+        catch (err) {
+          console.error(err);
+          alert('Error: ' + err.message);
+        }
+      }); 
+
+    });
   </script>
 </body>
 

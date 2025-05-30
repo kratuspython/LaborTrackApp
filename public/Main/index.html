@@ -46,14 +46,19 @@
      </div>
 
     <script>
+      
+
       // 1️⃣ At top of your <script>, before any functions run:
       let selectedCard = null, timerId;
-
+      
      
       // 2️⃣ Update initCardState to always set a default, then try to load:
       async function initCardState(card) {
         card.punchedIn = false;
         const btn = card.querySelector(".punch-btn");
+        const badge = card.querySelector(".badge");
+
+        
 
         const res = await fetch(`/api/punches?empId=${card.empData.employeeID}`, {
           credentials: "include"
@@ -61,24 +66,57 @@
         if (!res.ok) return;
 
         const openIns = await res.json();
+        
         console.log("openIns from server:", openIns);
 
         if (openIns.length > 0) {
           card.punchedIn = true;
-          
+
+          if (card.punchedIn) {
+            badge.textContent = 'In';
+            badge.classList.add('in');
+          } else {
+            badge.textContent = 'Out';
+            badge.classList.add('out');
+          }
+
+          // set badge + button for already punched in
+          badge.textContent      = "In";
+          badge.classList.add("in");
+
+          btn.textContent = "Punch Out";
+          btn.classList.add("out");
+
           // server gives us "2025-05-28 23:49:37"
           const ts     = openIns[0];
           const utcTs  = ts.replace(" ", "T") + "Z";      // "2025-05-28T23:49:37Z"
-          card.inTime  = new Date(utcTs);                // parsed as UTC
 
+          // parsed as UTC
+          card.inTime  = new Date(utcTs);                
           card.classList.add("punched-in");
+
+          badge.textContent = 'In';
+          badge.classList.replace('out', 'in');
+
           btn.textContent = "Punch Out";
           btn.classList.add("out");
+        }
+        else {
+          // NO OPEN PUNCH: reset badge to neutral
+          badge.textContent = "";
+          badge.classList.remove("in", "out");
+          btn.textContent = "Punch In";
+          btn.classList.remove("out");
+          card.classList.remove("punched-in");
         }
       }
       
       // 3️⃣ In loadEmployees, await that init *before* wiring handlers:
       async function loadEmployees() {
+
+        // 1) read the stored ID every time you build the list
+        const lastSelectedEmpId = localStorage.getItem('lastSelectedEmpId');
+
         clearGlobalTimer();
         clearStatus();
         selectedCard = null;
@@ -90,6 +128,11 @@
         if (!res.ok) return container.innerText = `Error ${res.status}`;
 
         const employees = await res.json();
+        // Debug: TO TEST
+        console.log("▶️ employees payload:", employees.map(e => ({
+          id: e.employeeID,
+          pic: e.profilePic
+        })));
         if (employees.length === 0) {
           container.innerText = "Currently no employees.";
           return;
@@ -101,11 +144,18 @@
           card.className = "employee-card";
           card.dataset.empid = emp.employeeID;
           card.empData = emp;
+          const fileName = emp.profilePic && emp.profilePic !== "default.jpg"
+          ? emp.profilePic
+          : "default-user.png";
           card.innerHTML = `
-            <img class="profile-pic" src="/Images/${emp.profilePic}" alt="${emp.name}">
+          <div class="badge"></div>
+            <img src="/Images/${emp.profilePic || 'default-user.png'}" class="profile-pic" alt="Profile">
             <h3>${emp.name}</h3>
-            <p><strong>Position:</strong> ${emp.jobDetails.position}</p>
-            <p><strong>ID:</strong> ${emp.employeeID}</p>
+            <div class="employee-details">
+              <p><strong>Position:</strong><br> ${emp.jobDetails.position}</p>
+              <p><strong>Department:</strong><br> ${emp.jobDetails.department}</p>
+              <p><strong>ID:</strong> ${emp.employeeID}</p>
+              </div>
             <button class="punch-btn">Punch In</button>
           `;
           container.appendChild(card);
@@ -115,9 +165,26 @@
           attachHandlers(card);           // wire up click & punch logic
         }
 
+        // restore previous selection if it still exists
+        if (lastSelectedEmpId) {
+          const prev = document.querySelector(
+            `.employee-card[data-empid="${lastSelectedEmpId}"]`
+          );
+          if (prev) { 
+            prev.click();
+            return;       // skip the “first in-progress” fallback
+          }
+        }
+
+        // if no stored card or it’s gone, fall back:
+        const firstInProg = container.querySelector(".employee-card.punched-in");
+        if (firstInProg) firstInProg.click();
+
         // auto-select the first in-progress punch so its timer resumes
         const inProg = container.querySelector(".employee-card.punched-in");
         if (inProg) inProg.click();
+
+
       }
 
        // ——— Utility to clear the existing timer —————————————————————————————
@@ -140,6 +207,7 @@
           document.getElementById("statusDuration").textContent = "";
         }
       }
+
       function updateDuration(ms) {
         const s = Math.floor(ms/1000)%60;
         const m = Math.floor(ms/60000)%60;
@@ -147,6 +215,7 @@
         document.getElementById("statusDuration").textContent =
           `Duration: ${h}h ${m}m ${s}s`;
       }
+      
       function clearStatus() {
         ["statusName","statusID","statusTime","statusDuration"]
           .forEach(id => document.getElementById(id).textContent = "—");
@@ -157,13 +226,14 @@
       // ——— Wire up single/double-click + punch button ——————————————————————
       function attachHandlers(card) {
         const btn = card.querySelector(".punch-btn");
+        const badge = card.querySelector(".badge");        
 
         // single-click: select this card & start/stop timer accordingly
         card.addEventListener("click", () => {
           if (selectedCard !== card) {
             clearGlobalTimer();
-
             selectedCard = card;
+            localStorage.setItem('lastSelectedEmpId', card.empData.employeeID);
             if (card.punchedIn) {
               showStatus(card.empData, card.inTime);
               timerId = setInterval(() =>
@@ -191,6 +261,20 @@
             });
             if (!r.ok) return alert("Punch-in failed");
             card.punchedIn = true;
+
+            // update badge        
+            badge.textContent = "In";
+            badge.classList.add("in");
+            badge.classList.remove("out");
+            
+            // keep current badge when reload:
+            localStorage.setItem('pendingPunch', String(card.empData.employeeID));
+
+            // update badge to green “In”
+            badge.textContent = "In";
+            badge.classList.add("in");
+            badge.classList.remove("out");
+
             const r2 = await fetch(`/api/punches?empId=${card.empData.employeeID}`, {
               credentials: "include"
             });
@@ -201,17 +285,9 @@
               const [Y, Mo, D]       = date.split("-").map(Number);
               const [h, m, s]        = time.split(":").map(Number);
               if (openIns2.length > 0) {
-                // Option 1 — append "Z":
                 const utcTs = openIns2[0].replace(" ", "T") + "Z";
                 card.inTime = new Date(utcTs);
 
-                // —OR— Option 2 with Date.UTC (uncomment to use):
-                /*
-                const [d,t]     = openIns2[0].split(" ");
-                const [Y,Mo,D]   = d.split("-").map(Number);
-                const [h,m,s]    = t.split(":").map(Number);
-                card.inTime      = new Date(Date.UTC(Y, Mo - 1, D, h, m, s));
-                */
               }
             }
             card.classList.add("punched-in");
@@ -224,6 +300,7 @@
             timerId = setInterval(() =>
               updateDuration(new Date() - card.inTime), 1000);
 
+            localStorage.setItem('lastSelectedEmpId', card.empData.employeeID);
           } else {
             // PUNCH OUT
             const r = await fetch(`/api/punchout?empId=${card.empData.employeeID}`, {
@@ -232,10 +309,17 @@
             const text = await r.text();
             if (!r.ok) return alert(`Punch-out failed: ${text}`);
             card.punchedIn = false;
+
+            // badge red “Out”
+            badge.textContent     = "Out";
+            badge.classList.add("out");
+            badge.classList.remove("in");
+
             card.classList.remove("punched-in");
             btn.textContent = "Punch In";
             btn.classList.remove("out");
             clearStatus();
+            localStorage.removeItem('lastSelectedEmpId');
           }
         });
       }

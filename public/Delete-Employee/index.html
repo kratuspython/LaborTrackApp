@@ -17,7 +17,7 @@
             </div>
             <ul class="nav-links">
                 <li><a href="../Main/index.html">Home</a></li>
-                <li><a href="">Logout</a></li>
+                <li><a href="#" id="logoutLink">Logout</a></li>
             </ul>
         </nav>
     </div>
@@ -40,8 +40,8 @@
         <!-------------------------------------------------------------------->
 
         <!------------------------- middle Content ----------------------------->
-        <div id="employeeCards" class="middle-panel-container">
-            <!-- employee cards will load here -->
+        <div class="middle-panel-container" id="employeeCardContainer">
+            <!-- Cards will be loaded here dynamically -->
         </div>
         <!-------------------------------------------------------------------->
 
@@ -61,71 +61,63 @@
     </div>
     <!--================================================================-->
     <script>
-        async function loadEmployees() {
-            const companyId = localStorage.getItem("companyId");
-            if (!companyId) {
-                alert("No company ID found.");
-                return;
-            }
-
-            const response = await fetch(`http://localhost:8080/employees?companyId=${companyId}`);
-            const employees = await response.json();
-            const container = document.getElementById("employeeCards");
-            container.innerHTML = "";
-
-            employees.forEach(emp => {
-                const card = document.createElement("div");
-                card.className = "employee-card";
-                card.setAttribute("data-id", emp.employeeID);
-
-                card.innerHTML = `
-                <img src="../Images/default-user.png" class="employee-photo">
-                <div class="employee-info">
-                    <h3>${emp.person.name}</h3>
-                    <p>${emp.jobDetails.position}</p>
-                    <button class="delete-btn">Delete</button>
-                </div>
-                `;
-
-                // Click: Show in right panel
-                card.addEventListener("click", () => {
-                document.getElementById("miniPhoto").src = "../Images/default-user.png";
-                document.getElementById("miniName").innerText = "Name: " + emp.person.name;
-                document.getElementById("miniPosition").innerText = "Position: " + emp.jobDetails.position;
-                document.getElementById("miniDepartment").innerText = "Department: " + emp.jobDetails.department;
-                document.getElementById("miniEmail").innerText = "Email: " + emp.contactInfo.email;
+        document.addEventListener('DOMContentLoaded', () => {
+            const logoutLink= document.getElementById('logoutLink');
+            
+            // 1) Logout
+            logoutLink.addEventListener('click', async e => {
+                e.preventDefault();
+                await fetch('/api/logout', {
+                method: 'POST',
+                credentials: 'include'
                 });
-
-                // Delete: Confirm and send request
-                card.querySelector(".delete-btn").addEventListener("click", async (e) => {
-                e.stopPropagation();
-                const confirmDelete = window.confirm(`Are you sure you want to delete ${emp.person.name}?`);
-                if (!confirmDelete) return;
-
-                const res = await fetch(`http://localhost:8080/employee/${emp.employeeID}`, { method: "DELETE" });
-                if (res.ok) {
-                    card.remove();
-                    alert("Employee deleted.");
-                } else {
-                    alert("Failed to delete employee.");
-                }
-        });
-
-    container.appendChild(card);
-    });
-    }
-    </script>
-    <script>
-        document.querySelector(".search-button").addEventListener("click", () => {
-            const searchValue = document.getElementById("employeeId").value.trim().toLowerCase();
-
-            const cards = document.querySelectorAll(".employee-card");
-
-            cards.forEach(card => {
-            const content = card.textContent.toLowerCase();
-            card.style.display = content.includes(searchValue) ? "flex" : "none";
+                window.location.href = '/login/index.html';
             });
         });
+        async function loadEmployeeCards() {
+            try {
+                const res = await fetch('/api/employees', {
+                credentials: 'include'
+                });
+                const employees = await res.json();
+
+                const container = document.getElementById('employeeCardContainer');
+                container.innerHTML = '';
+
+                employees.forEach(emp => {
+                const card = document.createElement('div');
+                card.classList.add('employee-card');
+                card.dataset.empId = emp.employeeID;
+
+                card.innerHTML = `
+                    <img src="/Images/${emp.profilePic || 'default-user.png'}" class="employee-photo" alt="Profile">
+                    <div class="employee-info">
+                    <h3>${emp.name}</h3>
+                    <p><strong>ID:</strong> ${emp.employeeID}</p>
+                    <p><strong>Position:</strong> ${emp.position}</p>
+                    <p><strong>Department:</strong> ${emp.department}</p>
+                    <button class="delete-btn">Delete</button>
+                    </div>
+                `;
+
+                card.querySelector('.delete-btn').addEventListener('click', async () => {
+                    if (confirm(`Are you sure you want to delete ${emp.name}?`)) {
+                    await fetch(`/api/employees/${emp.employeeID}`, {
+                        method: 'DELETE',
+                        credentials: 'include'
+                    });
+                    loadEmployeeCards(); // refresh list
+                    }
+                });
+
+                container.appendChild(card);
+                });
+
+            } catch (err) {
+                console.error('Failed to load employee cards:', err);
+            }
+        }
+        document.addEventListener('DOMContentLoaded', loadEmployeeCards);
     </script>
 </body>
 </html>

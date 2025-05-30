@@ -100,10 +100,11 @@ public class CompanyDatabaseREST {
                 String address = resultSet.getString("address");
                 String profile_image = resultSet.getString("profile_image");
                 
-                String[] dobParts = resultSet.getString("dob").split("/");
-                int day = Integer.parseInt(dobParts[0]);    
-                int month = Integer.parseInt(dobParts[1]);  
-                int year = Integer.parseInt(dobParts[2]);  
+                // dob is stored as "YYYY-MM-DD"
+                String[] dobParts = resultSet.getString("dob").split("-");
+                int year  = Integer.parseInt(dobParts[0]);
+                int month = Integer.parseInt(dobParts[1]);
+                int day   = Integer.parseInt(dobParts[2]); 
            
                 Person p = new Person(name, day, month, year, profile_image);
                 JobDetails j = new JobDetails(position, department, hourly_wage);
@@ -146,11 +147,12 @@ public class CompanyDatabaseREST {
                 String address = resultSet.getString("address");
                 String profile_image = resultSet.getString("profile_image");
                 int company_id = resultSet.getInt("company_id");
-
-                String[] dobParts = resultSet.getString("dob").split("/");
-                int day = Integer.parseInt(dobParts[0]);    
-                int month = Integer.parseInt(dobParts[1]);  
-                int year = Integer.parseInt(dobParts[2]);  
+                
+                // dob is stored as "YYYY-MM-DD"
+                String[] dobParts = resultSet.getString("dob").split("-");
+                int year  = Integer.parseInt(dobParts[0]);
+                int month = Integer.parseInt(dobParts[1]);
+                int day   = Integer.parseInt(dobParts[2]);
 
                 Person p = new Person(name, day, month, year, profile_image);
                 JobDetails j = new JobDetails(position, department, hourly_wage);
@@ -174,6 +176,11 @@ public class CompanyDatabaseREST {
             String checkSql = "SELECT COUNT(*) FROM employees WHERE email = ? AND company_id = ?";
             Connection connect = LaborTrackDBConnector.connect();
             pstmt = connect.prepareStatement(checkSql);
+            
+            // Insert Employee : TO TEST
+            System.out.println(e.getContactInfo().getEmail());
+            System.out.println(c.getCompanyID());
+            
             pstmt.setString(1, e.getContactInfo().getEmail());
             pstmt.setInt(2, c.getCompanyID());
             ResultSet rs = pstmt.executeQuery();
@@ -209,6 +216,57 @@ public class CompanyDatabaseREST {
         } catch (SQLException exce) {
             System.out.println("❌ SQL error inserting employee: " + exce.getMessage());
             return false;
+        }
+    }
+
+    // Insert employee and return ID:
+    public static int insertEmployeeAndGetId(Company company, Employee e) {
+        // Build a YYYY-MM-DD string from your day/month/year fields
+        String dob = String.format(
+            "%04d-%02d-%02d",
+            e.getYear(),      // e.g. 1988
+            e.getMonth(),     // 1–12
+            e.getDay()        // 1–31
+        );
+
+        String sql = ""
+          + "INSERT INTO employees "
+          + "(name, dob, position, department, hourly_wage, email, phone_number, address, profile_image, company_id) "
+          + "VALUES (?,  ?,   ?,        ?,          ?,            ?,     ?,            ?,       ?,             ?)";
+
+        try (
+            Connection conn = LaborTrackDBConnector.connect();
+            PreparedStatement ps = conn.prepareStatement(
+                sql,
+                Statement.RETURN_GENERATED_KEYS
+            )
+        ) {
+            ps.setString(1,  e.getName());
+            ps.setString(2,  dob);
+            ps.setString(3,  e.getJobDetails().getPosition());
+            ps.setString(4,  e.getJobDetails().getDepartment());
+            ps.setDouble(5,  e.getJobDetails().getHourlyWage());
+            ps.setString(6,  e.getContactInfo().getEmail());
+            ps.setString(7,  e.getContactInfo().getPhoneNumber());
+            ps.setString(8,  e.getContactInfo().getAddress());
+            ps.setString(9,  "default.jpg");                    // initial placeholder
+            ps.setInt(10,     company.getCompanyID());
+
+            int affected = ps.executeUpdate();
+            if (affected == 0) {
+                return -1;  // no row inserted
+            }
+
+            // grab the generated key
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+            return -1;
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            return -1;
         }
     }
 
@@ -398,6 +456,34 @@ public class CompanyDatabaseREST {
 		return "No Punch records found.";
 	}
     
+    public static boolean updateEmployeeProfilePic(int empId, String fileName) {
+        String command = "UPDATE employees " +
+            "     SET profile_image = ? " +
+            " WHERE employee_id = ?";
+        try {
+            Connection connect = LaborTrackDBConnector.connect();
+            PreparedStatement pstmt = connect.prepareStatement(command);
+
+            pstmt.setString(1, fileName);
+            pstmt.setInt   (2, empId);
+
+            // Debug: TO TEST:
+            System.out.println(fileName);
+            System.out.println(empId);
+
+            pstmt.setInt(2, empId);
+
+            int rows = pstmt.executeUpdate();
+
+            // Debug: TO TEST:
+            System.out.println("🔄 profile_image UPDATE affected rows: " + rows);
+
+            return (rows > 0);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
     
     public Employee readEmployeeFromID(Employee e) {
     	String query = "SELECT * FROM employees WHERE employee_id = ?";

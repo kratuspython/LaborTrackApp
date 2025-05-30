@@ -72,30 +72,55 @@ body {
     border: none;
     border-radius: 6px;
 }
-.employee-info-section {
+.employee-card {
+    background-color: white;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    box-shadow: 1px 1px 6px rgba(0, 0, 0, 0.1);
+    padding: 16px;
     display: flex;
-    gap: 20px;
-    align-items: flex-start;
-    margin: 0 0 30px 0;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    text-align: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-
-.employee-photo {
-    width: 120px;
-    height: 120px;
+.employee-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 2px 4px 12px rgba(0,0,0,0.15);
+}
+.employee-card img.profile-pic {
+    width: 80px;
+    height: 80px;
     border-radius: 50%;
     object-fit: cover;
-    border: 2px solid #2a56f5;
-    margin: 30px 15px 15px 15px;
+    margin-bottom: 12px;
 }
-
-.employee-details h2 {
-    margin: 0 0 15px 0;
+.employee-photo {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #1d79f2;
 }
-
-.employee-details p {
-    margin: 4px 0;
-    font-size: 16px;
-    text-align: left;
+.employee-info h3 {
+    margin: 8px 0 4px 0;
+    font-size: 18px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.employee-info p {
+    margin: 0;
+    font-size: 14px;
+    color: #444;
+    font-weight: 500;
+    font-family: 'Poppins', sans-serif;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    text-align: left;  
 }
 .punch-history-wrapper {
   text-align: left;

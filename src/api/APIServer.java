@@ -11,14 +11,24 @@ import models.CompanyDatabaseREST;
 import static spark.Spark.*;
 import spark.Route; 
 import spark.Spark; // <-- Add this import for staticFiles
+
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.nio.file.Paths;
+
+import javax.servlet.MultipartConfigElement;
+import javax.servlet.http.Part;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -38,10 +48,14 @@ public class APIServer {
     	// Set the server to listen to localhost:8080
         port(8088);
         
-        String staticDir = Paths.get("public").toAbsolutePath().toString();
-        System.out.println("Static files served from: " + staticDir);
+        String staticDir = Paths
+            .get(System.getProperty("user.dir"), "public")
+            .toAbsolutePath()
+            .toString();
+        System.out.println("⛳ Serving static files from: " + staticDir);
         staticFiles.externalLocation(staticDir);
-
+        System.out.println("Static files served from: " + staticDir);
+        
         
         // Convert java objects to JSON and vice versa
         Gson gson = new GsonBuilder()
@@ -55,6 +69,13 @@ public class APIServer {
         // Handles interactions with database (SQLite DB)
         CompanyDatabaseREST db = new CompanyDatabaseREST();
         
+        
+        before((req, res) -> {
+        req.raw().setAttribute(
+            "org.eclipse.jetty.multipartConfig",
+            new MultipartConfigElement("/tmp")
+        );
+        });
         
         // 1️⃣ authenticate a company login
         post("/api/login", (Route) (req, res) -> {
@@ -193,22 +214,50 @@ public class APIServer {
                     return gson.toJson(new ResponseError("Not logged in"));
                 }
 
-                // 2️⃣ parse Employee directly
-                Employee newEmp = gson.fromJson(req.body(), Employee.class);
+                // prints the form data into JSON: TO TEST
+                String raw = req.body();
+                System.out.println("🛑 RAW JSON BODY: " + raw);
+
+                // 2️⃣ parse JSON
+                JsonObject obj = gson.fromJson(req.body(), JsonObject.class);
+                Employee e  = gson.fromJson(req.body(), Employee.class);
+
+                // 3️⃣ Manually set the nested ContactInformation fields
+                String email = obj.get("email").getAsString();
+                String phoneNumber = obj.get("phoneNumber").getAsString();
+                String address = obj.get("address").getAsString();
+                e.getContactInfo().setEmail(email);
+                e.getContactInfo().setPhoneNumber(phoneNumber);
+                e.getContactInfo().setAddress(address);
+
+                // 4️⃣ Similarly for JobDetails
+                String position = obj.get("position").getAsString();
+                String department = obj.get("department").getAsString();
+                double wage = obj.get("hourlyWage").getAsDouble();
+                e.getJobDetails().setPosition(position);
+                e.getJobDetails().setDepartment(department);
+                e.getJobDetails().setHourlyWage(wage);
+
+                // 5️⃣ Similarly do for Person
+                String name = obj.get("name").getAsString();
 
                 // 3️⃣ insert into the correct company
                 Company company = new Company("", "", "");
                 company.setCompanyID(companyId);
-                boolean ok = db.insertEmployee(company, newEmp);
+                int newId = db.insertEmployeeAndGetId(company, e);
 
                 // 4️⃣ respond
-                if (ok) {
-                    res.status(201);
-                    return gson.toJson("Employee inserted successfully");
-                } else {
-                    res.status(500);
-                    return gson.toJson(new ResponseError("DAO.insertEmployee returned false"));
+                if (newId < 1) {
+                    res.status(400);
+                    return "{\"error\":\"Employee with this email already exists.\"}";
                 }
+
+                // 3️⃣ return the new ID for the client to use
+                return String.format(
+                    "{\"success\":true,\"employeeId\":%d}",
+                    newId
+                );
+
             } catch (Exception ex) {
                 ex.printStackTrace();  // logs the stack for debugging
                 res.status(500);
@@ -216,9 +265,61 @@ public class APIServer {
             }
         });
         
+        post("/api/employees/:id/image", (req, res) -> {
+            int empId = Integer.parseInt(req.params(":id"));
+
+            Part picPart = req.raw().getPart("profilePic");
+            if (picPart == null || picPart.getSize() == 0) {
+                res.status(400);
+                return gson.toJson(new ResponseError("No file uploaded"));
+            }
+
+            // derive extension
+            String submitted = Paths.get(picPart.getSubmittedFileName())
+                                    .getFileName().toString();
+            String ext = "";
+            int dot = submitted.lastIndexOf('.');
+            if (dot > 0) ext = submitted.substring(dot);
+
+            //Debug: TO Test
+            System.out.println(empId);
+
+            // unique name
+            String fileName = "profile_pic_" + empId + ext;
+
+            //Debug: TO Test
+            System.out.println(fileName);
+
+            // write to your static Images folder
+            Path out = Paths.get(staticDir, "Images", fileName);
+            try {
+                Files.createDirectories(out.getParent());
+            } catch (java.io.IOException e) {
+                res.status(500);
+                return gson.toJson(new ResponseError("Failed to create directories: " + e.getMessage()));
+            }
+            try (var in = picPart.getInputStream()) {
+                Files.copy(in, out, StandardCopyOption.REPLACE_EXISTING);
+            }
+
+            /// Error right here
+            // update DB
+            boolean ok = CompanyDatabaseREST.updateEmployeeProfilePic(empId, fileName);
+
+            // Debug: TO TEST
+            System.out.println("🛑 updateEmployeeProfilePic returned: " + ok);
+
+            if (!ok) {
+                res.status(500);
+                return gson.toJson(new ResponseError("Failed to update DB"));
+            }
+
+            res.type("application/json");
+            return "{\"success\":true}";
+        });
         
         // 4. Delete an employee from a company by ID
-        delete("/employee/:id", (req, res) -> {
+        delete("/api/employees/", (req, res) -> {
         	// obtain the employeeId
         	String idParam = req.params(":id");
         	

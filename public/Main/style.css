@@ -54,13 +54,13 @@ body {
 .main-content {
     display: flex;
     width: 100%;
-    margin: 100px 0 0 0;
+    margin: 85px 0 0 0;
 }
 /* ----------------------------------------------------------- */
 
 /* ---------------------- LEFT PANEL --------------------------*/
 .left-panel-container {
-    width: 17.5%;
+    width: 15.5%;
     padding: 20px;
     display: flex;
     flex-direction: column;
@@ -101,17 +101,13 @@ body {
 /* ---------------------- MIDDLE PANEL -------------------------*/
 .middle-panel-container {
     width: 65%;
-    padding: 20px;
+    padding: 10px;
     gap:20px;
+    display: grid;
++   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     background-color: white;
     box-sizing: border-box;
-}
-.employee-card {
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 1rem;
-  box-shadow: 2px 2px 6px rgba(0,0,0,0.1);
-  cursor: pointer;
+    border-radius: 10px;
 }
 .employee-photo {
     width: 80px;
@@ -124,6 +120,7 @@ body {
     margin: 0;
     font-size: 18px;
     width: 100%;
+    gap: 0.4rem;       
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -150,7 +147,7 @@ body {
 
 /* ----------------------- RIGHT PANEL ------------------------- */
 .right-panel-container {
-    width: 17.5%;
+    width: 19.5%;
     padding: 20px;
     color: black;
 }
@@ -175,34 +172,90 @@ body {
   justify-content: flex-start;
 }
 .employee-card {
-    border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 0.75rem;
-  box-shadow: 1px 1px 6px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  box-shadow: 1px 2px 8px rgba(0,0,0,0.06);
+  padding: 16px;
   cursor: pointer;
-  background: #fff;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.employee-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 2px 4px 12px rgba(0,0,0,0.1);
 }
 .employee-card img.profile-pic {
   width: 80px;
   height: 80px;
   border-radius: 50%;
   object-fit: cover;
-  display: block;
-  margin: 0 auto 0.5rem;
+  border: 2px solid #1d79f2;
+  margin-bottom: 12px;
 }
 .employee-card button.punch-btn {
-  width: 100%;
-  padding: 0.5rem;
-  border: none;
-  background: #007bff;
-  color: white;
-  border-bottom-left-radius: 8px;
-  border-bottom-right-radius: 8px;
-  cursor: pointer;
+    width: 100%;
+    padding: 8px 0;
+    font-size: 14px;
+    font-weight: 500;
+    background-color: #1d79f2;
+    color: white;
+    border: none;
+    border-radius: 0 0 10px 10px;
+    cursor: pointer;
+    transition: background 0.2s ease;
 }
 .employee-card button.punch-btn.out {
-  background: #dc3545;
+  background-color: #dc3545;
 }
+.employee-card p {
+    margin: 4px 0;
+    color: #444;
+    font-size: 14px;
+    text-align: left;
+    width: 100%; 
+}
+.employee-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+}
+
+.punch-btn:hover {
+  background-color: #145dce;
+}
+
+/* Badge indicator punch in/out */
+.employee-card { 
+  position: relative; 
+}
+.badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 2px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 4px;
+  color: white;
+  background: #888;  
+  pointer-events: none; 
+  opacity: 1;   
+  content: "";        
+  transition: opacity 0.2s ease;
+}
+.badge.in {
+  background: #28a745;
+}
+
+.badge.out {
+  background: #dc3545;
+}                         */
+
 .right-panel {
   border: 1px solid #ddd;
   border-radius: 8px;
@@ -211,13 +264,26 @@ body {
 }
 .employee-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 20px;
+  padding: 1rem;
+  background: white;
+  border-radius: 8px;
 }
 .status-panel {
+  background: #fafafa;
   border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 1rem;
-  background: #f9f9f9;
-  height: fit-content;
+  border-radius: 10px;
+  padding: 16px;
+  text-align: left;
+}
+.status-panel h2 {
+  margin-top: 0;
+  font-size: 20px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 8px;
+}
+.status-panel div {
+  margin: 8px 0;
+  font-size: 14px;
 }

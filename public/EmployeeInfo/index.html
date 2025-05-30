@@ -16,7 +16,7 @@
             </div>
             <ul class="nav-links">
                 <li><a href="../Main/index.html">Home</a></li>
-                <li><a href="">Logout</a></li>
+                <li><a href="#" id="logoutLink">Logout</a></li>
             </ul>
         </nav>
     </div>
@@ -32,23 +32,9 @@
         <!-------------------------------------------------------------------->
         
         <!------------------------- Middle Panel ----------------------------->
-        <div class="middle-panel-container">
-            <!-- <div class="employee-info-section">
-                <img src="../Images/Screenshot 2024-02-27 225308.png" alt="Employee Photo" class="employee-photo">
-                <div class="employee-details">
-                    <h2>John Markien</h2>
-                    <p><strong>Date of Birth:</strong> 07/16/2002</p>
-                    <p><strong>Age:</strong> 22</p>
-                    <p><strong>Position:</strong> Software Engineer</p>
-                    <p><strong>Department:</strong> Engineering</p>
-                    <p><strong>Hourly Wage:</strong> $45.5</p>
-                    <p><strong>Email:</strong> John@gmail.com</p>
-                    <p><strong>Phone Number: </strong> 347-582-5005</p>
-                    <p><strong>Address:</strong> 1234 Tech Blvd, NYC, NY, 10039</p>
-                </div>
-            </div> -->
-            <div id="employeeList" class="employee-list-container"></div>
-        
+        <div class="middle-panel-container" id="employeeCardContainer">
+            
+        </div>
         <!-------------------------------------------------------------------->
         
         <!------------------------- Right Panel ------------------------------>
@@ -60,90 +46,86 @@
     </div>
     <!--================================================================-->
     <script>
-        async function loadEmployees() {
-            const companyId = localStorage.getItem("companyId");
-            if (!companyId) {
-            alert("You must be logged in.");
-            return;
-            }
-
-            const response = await fetch(`http://localhost:8080/employees?companyId=${companyId}`);
-            const employees = await response.json();
-            const container = document.getElementById("employeeList");
-            container.innerHTML = "";
-
-            if (!employees || employees.length === 0) {
-            container.innerHTML = "<p>No employees found for this company.</p>";
-            return;
-            }
-
-            employees.forEach(emp => {
-            const card = document.createElement("div");
-            card.className = "employee-info-section";
-
-            card.innerHTML = `
-                <img src="../Images/default-user.png" alt="Employee Photo" class="employee-photo">
-                <div class="employee-details">
-                <h2>${emp.person.name}</h2>
-                <p><strong>Date of Birth:</strong> ${emp.person.month}/${emp.person.day}/${emp.person.year}</p>
-                <p><strong>Position:</strong> ${emp.jobDetails.position}</p>
-                <p><strong>Department:</strong> ${emp.jobDetails.department}</p>
-                <p><strong>Hourly Wage:</strong> $${emp.jobDetails.hourlyWage.toFixed(2)}</p>
-                <p><strong>Email:</strong> ${emp.contactInfo.email}</p>
-                <p><strong>Phone Number:</strong> ${emp.contactInfo.phoneNumber}</p>
-                <p><strong>Address:</strong> ${emp.contactInfo.address}</p>
-                </div>
-            `;
-
-            container.appendChild(card);
-
-            const historyTable = document.createElement("table");
-            historyTable.className = "punch-table";
-
-            const thead = `
-            <thead>
-                <tr>
-                <th>Punch In</th>
-                <th>Punch Out</th>
-                </tr>
-            </thead>
-            `;
-            historyTable.innerHTML = thead;
-
-            const tbody = document.createElement("tbody");
-            historyTable.appendChild(tbody);
-
-            // Load punch history
-            fetch(`http://localhost:8080/punches/${emp.employeeID}`)
-            .then(res => res.json())
-            .then(records => {
-                const punchSection = document.createElement("div");
-                punchSection.className = "punch-history-wrapper";
-
-                const title = document.createElement("h3");
-                title.textContent = "Punch History";
-                punchSection.appendChild(title);
-
-                const countDisplay = document.createElement("p");
-                countDisplay.innerText = `Total Punches: ${records.length}`;
-                punchSection.appendChild(countDisplay);
-
-                if (!Array.isArray(records) || records.length === 0) {
-                    tbody.innerHTML = "<tr><td colspan='2'>No punch history found.</td></tr>";
-                } else {
-                    records.reverse().forEach(r => {
-                    const tr = document.createElement("tr");
-                    tr.innerHTML = `
-                        <td>${new Date(r.punchIn).toLocaleString()}</td>
-                        <td>${new Date(r.punchOut).toLocaleString()}</td>
-                    `;
-                    tbody.appendChild(tr);
-                    });
-                }
-
-                punchSection.appendChild(historyTable);
-                card.appendChild(punchSection);
+        document.addEventListener('DOMContentLoaded', () => {
+            const logoutLink= document.getElementById('logoutLink');
+            
+            // 1) Logout
+            logoutLink.addEventListener('click', async e => {
+                e.preventDefault();
+                await fetch('/api/logout', {
+                method: 'POST',
+                credentials: 'include'
+                });
+                window.location.href = '/login/index.html';
             });
+
+            loadEmployees();
+        });
+
+        async function initCardState(card) {
+            card.punchedIn = false;
+            const btn = card.querySelector(".punch-btn");
+
+            const res = await fetch(`/api/punches?empId=${card.empData.employeeID}`, {
+            credentials: "include"
+            });
+            if (!res.ok) return;
+
+            const openIns = await res.json();
+            
+            console.log("openIns from server:", openIns);
+
+            if (openIns.length > 0) {
+            card.punchedIn = true;
+            
+            // server gives us "2025-05-28 23:49:37"
+            const ts     = openIns[0];
+            const utcTs  = ts.replace(" ", "T") + "Z";      // "2025-05-28T23:49:37Z"
+            card.inTime  = new Date(utcTs);                // parsed as UTC
+
+            card.classList.add("punched-in");
+            btn.textContent = "Punch Out";
+            btn.classList.add("out");
+            }
+        }
+        
+        // 3️⃣ In loadEmployees, await that init *before* wiring handlers:
+        async function loadEmployeeCards() {
+            try {
+                const res = await fetch('/api/employees', {
+                credentials: 'include'
+                });
+                const employees = await res.json();
+
+                const container = document.getElementById('employeeCardContainer');
+                container.innerHTML = '';
+
+                employees.forEach(emp => {
+                const card = document.createElement('div');
+                card.classList.add('employee-card');
+                card.dataset.empId = emp.employeeID;
+
+                card.innerHTML = `
+                    <img src="/Images/${emp.profilePic || 'default-user.png'}" class="employee-photo" alt="Profile">
+                    <div class="employee-info">
+                    <h3>${emp.name}</h3>
+                    <p><strong>ID:</strong> ${emp.employeeID}</p>
+                    <p><strong>Position:</strong> ${emp.position}</p>
+                    <p><strong>Department:</strong> ${emp.department}</p>
+                    </div>
+                `;
+
+                
+
+                container.appendChild(card);
+                });
+
+            } catch (err) {
+                console.error('Failed to load employee cards:', err);
+            }
+        }
+        document.addEventListener('DOMContentLoaded', loadEmployeeCards);
+        
 
         window.onload = loadEmployees;
     </script>
