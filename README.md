@@ -1,6 +1,8 @@
 # LaborTrack
 
-LaborTrack is full stack web application. The purpose of this app is for local buisness in the community that has not access to an automatic or dynamic employee tracking. This web application will be beneficial because with access to a computer or smartphone, owner can easily access employee Personal information, contact Information, Job Details, Wage history, etc.Add commentMore actions
+LaborTrack is a full-stack web application designed for local businesses in the community that do not have access to automated or dynamic employee tracking tools. The app allows business owners to easily manage employee information from a computer or smartphone, including personal details, contact information, job assignments, wage history, and more.
+
+The main goal of building this application was not only to create something useful for small businesses but also to demonstrate my growth as a developer. Through this project, I challenged myself to learn and apply a new programming language (Java), work with both front-end and back-end development, explore frameworks, and integrate a database for real-world functionality.
 
 1. Login your company credentials.
 2. If you don't have a company account, create one (signup).
